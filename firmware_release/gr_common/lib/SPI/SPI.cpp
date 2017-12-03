@@ -86,9 +86,10 @@ void SPIClass::begin()
   MPC.PC6PFS.BIT.PSEL = 0x0d;
   PORTC.PMR.BIT.B7 = 1;
   MPC.PC7PFS.BIT.PSEL = 0x0d;
-  PORTC.PMR.BIT.B4 = 1;
-  MPC.PC4PFS.BIT.PSEL = 0x0d;
-  RSPI0.SPCMD0.BIT.SSLA = 0;
+/* SS is controlled by GPIO */
+//  PORTC.PMR.BIT.B4 = 1;
+//  MPC.PC4PFS.BIT.PSEL = 0x0d;
+//  RSPI0.SPCMD0.BIT.SSLA = 0;
 
   /* Wake RSPI unit from standby mode */
   MSTP(RSPI0) = 0u;
@@ -98,14 +99,14 @@ void SPIClass::begin()
   RSPI0.SSLP.BIT.SSL0P = 0u;
   /* Set SPPCR register */
   RSPI0.SPPCR.BYTE = 0u;
-  /* Set bit rate to 12Mbit/s, by setting SPBR to 0 */
-  RSPI0.SPBR = SPI_CLOCK_DIV4;
+  /* Set bit rate to 4Mbit/s, by setting SPBR to 0 */
+  RSPI0.SPBR = SPI_CLOCK_DIV12;
   /* Set SPDCR register */
   RSPI0.SPDCR.BYTE = 0x20u;
   /* Set RSPI sequence control pointer to SPCMD0 */
   RSPI0.SPSCR.BYTE = 0u;
   /* Set SPCMD0 register (command register 0) */
-  RSPI0.SPCMD0.WORD = 0x1700u; //LSB first, 8bit, SPI MODE0, SSL0(External)
+  RSPI0.SPCMD0.WORD = 0x0700u; //MSB first, 8bit, SPI MODE0, SSL0(External)
 
   RSPI0.SPCR.BIT.SPRIE = 1; // Enable Receive Interrupt Request
   RSPI0.SPCR.BIT.SPE = 1; //Start SPI

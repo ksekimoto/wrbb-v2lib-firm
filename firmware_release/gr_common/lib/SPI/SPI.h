@@ -64,6 +64,7 @@
 #define SPI_CLOCK_DIV2   0x00  // 24MHz
 #define SPI_CLOCK_DIV4   0x01  // 12MHz
 #define SPI_CLOCK_DIV8   0x03  // 6MHz
+#define SPI_CLOCK_DIV12  0x05  // 4MHz
 #define SPI_CLOCK_DIV16  0x07  // 3MHz
 #define SPI_CLOCK_DIV32  0x0F  //
 #define SPI_CLOCK_DIV64  0x1F
@@ -174,6 +175,8 @@ private:
       spbr = SPI_CLOCK_DIV4;
     } else if (clock >= PCLK / 8) {
       spbr = SPI_CLOCK_DIV8;
+    } else if (clock >= PCLK / 12) {
+      spbr = SPI_CLOCK_DIV12;
     } else if (clock >= PCLK / 16) {
       spbr = SPI_CLOCK_DIV16;
     } else if (clock >= PCLK / 32) {
@@ -337,6 +340,33 @@ public:
     }
     while (!(SPSR & _BV(SPIF))) ;
     *p = SPDR;
+  }
+#else
+  inline static void transfer(void *buf, size_t count) {
+    if (count == 0) return;
+    st_rspi_spsr spsr;
+    spsr.BYTE = RSPI0.SPSR.BYTE;
+    if(spsr.BIT.OVRF == 1)
+    {
+        spsr.BIT.OVRF = 0;
+        spsr.BIT.b7 = 1;
+        spsr.BIT.b5 = 1;
+        RSPI0.SPSR.BYTE = spsr.BYTE;
+    }
+    uint8_t *p = (uint8_t *)buf;
+    RSPI0.SPDR.LONG = (unsigned long)(*p);
+    while (--count > 0) {
+      uint8_t out = *(p + 1);
+      while(ICU.IR[39].BIT.IR == 0);
+      ICU.IR[39].BIT.IR = 0;
+      uint8_t in = (uint8_t)RSPI0.SPDR.LONG;
+      RSPI0.SPDR.LONG = (unsigned long)out;
+      *p++ = in;
+    }
+    while(ICU.IR[39].BIT.IR == 0);
+    ICU.IR[39].BIT.IR = 0;
+    *p = (uint8_t)RSPI0.SPDR.LONG;
+    return;
   }
 #endif //GRSAKURA
   // After performing a group of transfers and releasing the chip select
