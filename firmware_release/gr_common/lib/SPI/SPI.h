@@ -341,6 +341,59 @@ public:
     while (!(SPSR & _BV(SPIF))) ;
     *p = SPDR;
   }
+#else
+#if 0
+  inline static uint16_t transfer16(uint16_t data) {
+    union { uint16_t val; struct { uint8_t lsb; uint8_t msb; }; } in, out;
+    in.val = data;
+    if (!(SPCR & _BV(DORD))) {
+      SPDR = in.msb;
+      asm volatile("nop"); // See transfer(uint8_t) function
+      while (!(SPSR & _BV(SPIF))) ;
+      out.msb = SPDR;
+      SPDR = in.lsb;
+      asm volatile("nop");
+      while (!(SPSR & _BV(SPIF))) ;
+      out.lsb = SPDR;
+    } else {
+      SPDR = in.lsb;
+      asm volatile("nop");
+      while (!(SPSR & _BV(SPIF))) ;
+      out.lsb = SPDR;
+      SPDR = in.msb;
+      asm volatile("nop");
+      while (!(SPSR & _BV(SPIF))) ;
+      out.msb = SPDR;
+    }
+    return out.val;
+  }
+#endif
+  inline static void transfer(void *buf, size_t count) {
+    if (count == 0) return;
+    st_rspi_spsr spsr;
+    spsr.BYTE = RSPI0.SPSR.BYTE;
+    if(spsr.BIT.OVRF == 1)
+    {
+        spsr.BIT.OVRF = 0;
+        spsr.BIT.b7 = 1;
+        spsr.BIT.b5 = 1;
+        RSPI0.SPSR.BYTE = spsr.BYTE;
+    }
+    uint8_t *p = (uint8_t *)buf;
+    RSPI0.SPDR.LONG = (unsigned long)(*p);
+    while (--count > 0) {
+      uint8_t out = *(p + 1);
+      while(ICU.IR[39].BIT.IR == 0);
+      ICU.IR[39].BIT.IR = 0;
+      uint8_t in = (uint8_t)RSPI0.SPDR.LONG;
+      RSPI0.SPDR.LONG = (unsigned long)out;
+      *p++ = in;
+    }
+    while(ICU.IR[39].BIT.IR == 0);
+    ICU.IR[39].BIT.IR = 0;
+    *p = (uint8_t)RSPI0.SPDR.LONG;
+    return;
+  }
 #endif //__RX600__
   // After performing a group of transfers and releasing the chip select
   // signal, this function allows others to access the SPI bus

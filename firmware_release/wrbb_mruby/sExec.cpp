@@ -31,6 +31,9 @@
 #include "sI2c.h"
 #include "sServo.h"
 #include "sGlobal.h"
+#include "sSpi.h"
+#include "sFont.h"
+#include "sLcdSpi.h"
 
 #if BOARD == BOARD_GR || FIRMWARE == SDBT || FIRMWARE == SDWF || BOARD == BOARD_P05 || BOARD == BOARD_P06
 	#include "sSdCard.h"
@@ -102,6 +105,9 @@ bool RubyRun(void)
 	mem_Init(mrb);		//ファイル関連メソッドの設定
 	i2c_Init(mrb);		//I2C関連メソッドの設定
 	servo_Init(mrb);	//サーボ関連メソッドの設定
+	spi_Init(mrb);		//SPI関連のメソッドの設定
+	font_Init(mrb);		//Font関連のメソッドの設定
+	lcdSpi_Init(mrb);	//Lcd関連のメソッドの設定
 
 	//classtest_Init(mrb);
 
