@@ -61,14 +61,14 @@ end
 
 def displayArraySPILM pinCS, ary
     ary.each_with_index do |x, i|
-        pl "#{i+1}: #{x}"
+        #pl "#{i+1}: #{x}"
         writeSPILM pinCS, i+1, x
     end
 end
 
 def displayUnicodeSPILM pinCS, index
     a = "        "
-    a = getUnicodeFont(index)
+    a = FONT.data(index)
     i = 0
     8.times do
         #pl "#{i+1}: #{a[i]}"
@@ -99,11 +99,11 @@ end
 
 def displayUnicodeStrSPILM pinCS, str
     #pl "str size = " + str.length.to_s
-    unicode = cnvUtf8ToUnicode(str, str.length)
+    unicode = FONT.cnvUtf8ToUnicode(str, str.length)
     i = 0
     size = unicode.size / 2
     size.times do
-        u = getUnicodeAtIndex(unicode, i)
+        u = FONT.getUnicodeAtIndex(unicode, i)
         pl u.to_s(16) 
         displayUnicodeSPILM pinCS, u
         i = i + 1
@@ -111,13 +111,15 @@ def displayUnicodeStrSPILM pinCS, str
     end
 end
 
+FONT = Font.new(2)
+
 pinCS = @CS0
 SPILM = Spi.new()
 pinMode(pinCS, OUTPUT)
 digitalWrite(pinCS, HIGH)
 
 digitalWrite(pinCS, LOW)
-SPILM.beginTransaction(1000000, @MSBFIRST, @SPI_MODE0)
+SPILM.beginTransaction(100000, @MSBFIRST, @SPI_MODE0)
 
 initSPILM pinCS
 displayArraySPILM pinCS, [255, 129, 189, 165, 165, 189, 129, 255]

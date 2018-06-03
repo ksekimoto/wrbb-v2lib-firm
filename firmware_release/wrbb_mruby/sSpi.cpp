@@ -111,6 +111,9 @@ mrb_value mrb_spi_transfers(mrb_state *mrb, mrb_value self)
 
 void spi_Init(mrb_state *mrb)
 {
+	//クラスを作成する前には、強制gcを入れる
+	mrb_full_gc(mrb);
+
 	struct RClass *spiModule = mrb_define_class(mrb, "Spi", mrb->object_class);
 	MRB_SET_INSTANCE_TT(spiModule, MRB_TT_DATA);
 

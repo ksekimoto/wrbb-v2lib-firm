@@ -17,11 +17,11 @@
 
 #include "sFont.h"
 
-static ASCII_FONT_TBL _misaki_font6x12_Tbl = {
+static const ASCII_FONT_TBL _misaki_font6x12_Tbl = {
 	(unsigned char *)misaki_font6x12_data
 };
 
-FONT_TBL misaki_font6x12_tbl = {
+static const FONT_TBL misaki_font6x12_tbl = {
 	FONT_ASCII,
 	(char *)"MisakiFont6x12",
 	6,

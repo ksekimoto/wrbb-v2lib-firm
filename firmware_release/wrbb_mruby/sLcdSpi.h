@@ -40,9 +40,9 @@ typedef struct _LCDSPI_PARAM {
 
 class LcdSpi {
 public:
-	LcdSpi(int num);
-	virtual ~LcdSpi() {};
-	void Initialize(int num);
+	LcdSpi(int lcd_id, int spihw);
+	virtual ~LcdSpi();
+	void Initialize();
 	void Clear();
 	void BitBltEx565(int x, int y, int width, int height, uint32_t data[]);
 	void BitBltEx(int x, int y, int width, int height, uint32_t data[]);
@@ -50,9 +50,12 @@ public:
 	void WriteChar(unsigned char c, int cx, int cy);
 	void WriteFormattedChar(unsigned char ch);
 	void SetFont(Font *font);
+	int DispBmpSd(int x, int y, const char *fn);
+	int DispJpegSd(int x, int y, const char *fn);
 	Font *GetFont();
 private:
-	int _lcdspi_type;
+	int _lcd_id;
+	int _spihw;
 	uint16_t _cx;
 	uint16_t _cy;
 	uint16_t _disp_wx;
@@ -75,9 +78,9 @@ void lcdSpi_Init(mrb_state *mrb);
 
 void SPISW_Initialize(void);
 void SPISW_Reset(void);
-void SPISW_LCD_cmd0(uint8_t dat);
-void SPISW_LCD_dat0(uint8_t dat);
-void SPISW_LCD_cmd1(uint8_t dat);
-void SPISW_LCD_dat1(uint8_t dat);
+void SPISW_LCD_cmd8_0(uint8_t dat);
+void SPISW_LCD_dat8_0(uint8_t dat);
+void SPISW_LCD_cmd8_1(uint8_t dat);
+void SPISW_LCD_dat8_1(uint8_t dat);
 
 #endif /* SLCDSPI_H_ */

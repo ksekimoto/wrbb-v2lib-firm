@@ -17,13 +17,13 @@
 
 #include "sFont.h"
 
-UNICODE_FONT_TBL _misaki_font8x8_Tbl = {
+static const UNICODE_FONT_TBL _misaki_font8x8_Tbl = {
 	(unsigned short *)misaki_font8x8_CUniFontIdx,
 	(unsigned char *)misaki_font8x8_CUniFontMap,
 	(unsigned char *)misaki_font8x8_data
 };
 
-FONT_TBL misaki_font8x8_tbl = {
+static const FONT_TBL misaki_font8x8_tbl = {
 	.font_type = FONT_UNICODE,
 	.font_name = (char *)"MisakiFont8x8",
 	.font_wx = 8,

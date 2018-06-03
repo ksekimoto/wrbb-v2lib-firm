@@ -17,17 +17,17 @@
 
 #include "sFont.h"
 
-static ASCII_FONT_TBL _misaki_font4x8_Tbl = {
+static const ASCII_FONT_TBL _misaki_font4x8_Tbl = {
 	(unsigned char *)misaki_font4x8_data
 };
 
-FONT_TBL misaki_font4x8_tbl = {
-	FONT_ASCII,
-	(char *)"MisakiFont4x8",
-	4,
-	8,
-	(ASCII_FONT_TBL *)&_misaki_font4x8_Tbl,
-	(UNICODE_FONT_TBL *)NULL
+static const FONT_TBL misaki_font4x8_tbl = {
+	.font_type = FONT_ASCII,
+	.font_name = (char *)"MisakiFont4x8",
+	.font_wx = 4,
+	.font_wy = 8,
+	.ascii_font_tbl = (ASCII_FONT_TBL *)&_misaki_font4x8_Tbl,
+	.unicode_font_tbl = (UNICODE_FONT_TBL *)NULL
 };
 
 //Font MisakiFont4x8((FONT_TBL *)&misaki_font4x8_tbl);

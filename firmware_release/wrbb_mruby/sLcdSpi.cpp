@@ -13,12 +13,24 @@
 #include <mruby/class.h>
 #include <mruby/string.h>
 
+#include <SD.h>
 #include "../wrbb.h"
-#include "sLcdSpi.h"
-
 #include "sFont.h"
 #include "PCF8833.h"
 #include "S1D15G10.h"
+#include "ILI9340.h"
+#include "sLcdSpi.h"
+#include "sSpi.h"
+#include "sJpeg.h"
+
+#if BOARD == BOARD_GR || FIRMWARE == SDBT || FIRMWARE == SDWF || BOARD == BOARD_P05 || BOARD == BOARD_P06
+	#include "sSdCard.h"
+#endif
+
+#define TEST_LCDSPI
+#ifdef TEST_LCDSPI
+#include "sLcdSpiTest.h"
+#endif
 
 //#define	DEBUG		// Define if you want to debug
 #ifdef DEBUG
@@ -27,23 +39,51 @@
 #  define DEBUG_PRINT(m,v)    // do nothing
 #endif
 
-static uint8_t _resetPin = 5;
+static volatile int g_spihw = 0;
+static Spi2* pspi;
+static int _clock = 4000000;
+static int _bitOrder = 1;	// 0:LSB First, 1:MSB First
+static int _dataMode = 0;	// 0-3:Mode0-Mode3
 static uint8_t _csPin = 10;
-static uint8_t _rsPin = 6;
-static uint8_t _doutPin = 11;
-static uint8_t _dinPin = 12;
 static uint8_t _clkPin = 13;
+static uint8_t _doutPin = 11;
+static uint8_t _resetPin = 6;
+static uint8_t _rsPin = 5;
+static uint8_t _dinPin = 12;
 
 static void delay_ms(volatile uint32_t n)
 {
 	delay(n);
 }
 
+static void SPIHW_SetPinMode(void)
+{
+	MPC.PWPR.BYTE = 0x00u;
+	MPC.PWPR.BYTE = 0x40u;
+	PORTC.PMR.BIT.B5 = 1;
+	MPC.PC6PFS.BIT.PSEL = 0x0d;
+	PORTC.PMR.BIT.B6 = 1;
+	MPC.PC6PFS.BIT.PSEL = 0x0d;
+	PORTC.PMR.BIT.B7 = 1;
+	MPC.PC6PFS.BIT.PSEL = 0x0d;
+}
+
+static void SPISW_SetPinMode(void)
+{
+	MPC.PWPR.BYTE = 0x00u;
+	MPC.PWPR.BYTE = 0x40u;
+	PORTC.PMR.BIT.B5 = 0;
+	PORTC.PMR.BIT.B6 = 0;
+	PORTC.PMR.BIT.B7 = 0;
+}
+
 void SPISW_Initialize()
 {
 	pinMode(_csPin, OUTPUT);
-	pinMode(_doutPin, OUTPUT);
+	pinMode(_resetPin, OUTPUT);
+	pinMode(_rsPin, OUTPUT);
 	pinMode(_clkPin, OUTPUT);
+	pinMode(_doutPin, OUTPUT);
 	pinMode(_dinPin, INPUT);
 }
 
@@ -60,25 +100,58 @@ void SPISW_Write(uint8_t dat)
 	}
 }
 
-void SPISW_LCD_cmd0(uint8_t dat)
+void SPI_Write(uint8_t dat)
+{
+	if (g_spihw) {
+#if 0
+		SPIHW_SetPinMode(void)
+#endif
+		pspi->transfer(dat);
+#if 0
+		SPISW_SetPinMode(void)
+#endif
+	} else {
+		SPISW_Write(dat);
+	}
+}
+
+void SPISW_LCD_cmd8_0(uint8_t dat)
 {
     // Enter command mode: SDATA=LOW at rising edge of 1st SCLK
 	digitalWrite(_csPin, LOW);
 	digitalWrite(_doutPin, LOW);
 	digitalWrite(_clkPin, LOW);
 	digitalWrite(_clkPin, HIGH);
-    SPISW_Write(dat);
+    SPI_Write(dat);
 	digitalWrite(_csPin, HIGH);
 }
 
-void SPISW_LCD_dat0(uint8_t dat)
+void SPISW_LCD_dat8_0(uint8_t dat)
 {
     // Enter data mode: SDATA=HIGH at rising edge of 1st SCLK
 	digitalWrite(_csPin, LOW);
 	digitalWrite(_doutPin, HIGH);
 	digitalWrite(_clkPin, LOW);
 	digitalWrite(_clkPin, HIGH);
-	SPISW_Write(dat);
+	SPI_Write(dat);
+	digitalWrite(_csPin, HIGH);
+}
+
+void SPISW_LCD_cmd8_1(uint8_t dat)
+{
+    // Enter command mode: RS=LOW at rising edge of 1st SCLK
+	digitalWrite(_csPin, LOW);
+	digitalWrite(_rsPin, LOW);
+    SPI_Write(dat);
+	digitalWrite(_csPin, HIGH);
+}
+
+void SPISW_LCD_dat8_1(uint8_t dat)
+{
+    // Enter data mode: RS=HIGH at rising edge of 1st SCLK
+	digitalWrite(_csPin, LOW);
+	digitalWrite(_rsPin, HIGH);
+	SPI_Write(dat);
 	digitalWrite(_csPin, HIGH);
 }
 
@@ -98,20 +171,20 @@ static void PCF8833_Reset()
 
 static void PCF8833_Initialize()
 {
-	SPISW_Initialize();
+	//SPI_Initialize();
 	PCF8833_Reset();
 
-	SPISW_LCD_cmd0(PCF8833_SLEEPOUT);
-	SPISW_LCD_cmd0(PCF8833_BSTRON);
+	SPISW_LCD_cmd8_0(PCF8833_SLEEPOUT);
+	SPISW_LCD_cmd8_0(PCF8833_BSTRON);
 	delay_ms(100);
-	SPISW_LCD_cmd0(PCF8833_COLMOD);
-	SPISW_LCD_dat0(0x03);
-	SPISW_LCD_cmd0(PCF8833_MADCTL);
-	SPISW_LCD_dat0(0x00);      // 0xc0 MirrorX, MirrorY
-	SPISW_LCD_cmd0(PCF8833_SETCON);
-	SPISW_LCD_dat0(0x35);
+	SPISW_LCD_cmd8_0(PCF8833_COLMOD);
+	SPISW_LCD_dat8_0(0x03);
+	SPISW_LCD_cmd8_0(PCF8833_MADCTL);
+	SPISW_LCD_dat8_0(0x00);      // 0xc0 MirrorX, MirrorY
+	SPISW_LCD_cmd8_0(PCF8833_SETCON);
+	SPISW_LCD_dat8_0(0x35);
 	delay_ms(100);
-	SPISW_LCD_cmd0(PCF8833_DISPON);
+	SPISW_LCD_cmd8_0(PCF8833_DISPON);
 }
 
 /* ********************************************************************* */
@@ -130,39 +203,177 @@ static void S1D15G10_Reset()
 
 static void S1D15G10_Initialize()
 {
-	pinMode(_resetPin, OUTPUT);
-	SPISW_Initialize();
+	//SPI_Initialize();
 	S1D15G10_Reset();
 	digitalWrite(_csPin, LOW);
 	digitalWrite(_doutPin, LOW);
 	digitalWrite(_clkPin, HIGH);
 
 	delay_ms(200);
-	SPISW_LCD_cmd0(S1D15G10_DISCTL);	// Display Control
-	SPISW_LCD_dat0(0x0d);				// 0x00 = 2 divisions, switching period=8 (default)
-	SPISW_LCD_dat0(0x20);				// 0x20 = nlines/4 - 1 = 132/4 - 1 = 32)
-	SPISW_LCD_dat0(0x00);				// 0x00 = no inversely highlighted lines
-	SPISW_LCD_cmd0(S1D15G10_COMSCN);	// common output scan direction
-	SPISW_LCD_dat0(0x01);				// 0x01 = Scan 1->80, 160<-81
-	SPISW_LCD_cmd0(S1D15G10_OSCON);		// oscillators on and get out of sleep mode.
-	SPISW_LCD_cmd0(S1D15G10_SLPOUT);	// sleep out
-	SPISW_LCD_cmd0(S1D15G10_PWRCTR);	// reference voltage regulator on, circuit voltage follower on, BOOST ON
-	SPISW_LCD_dat0(0xf);				// everything on, no external reference resistors
-	SPISW_LCD_cmd0(S1D15G10_DISNOR);	// display mode
-	SPISW_LCD_cmd0(S1D15G10_DISINV);	// display mode
-	SPISW_LCD_cmd0(S1D15G10_PTLOUT);	// Partial area off
-	SPISW_LCD_cmd0(S1D15G10_DATCTL);	// The DATCTL command selects the display mode (8-bit or 12-bit).
-	SPISW_LCD_dat0(0x00);				// 0x01 = page address inverted, col address normal, address scan in col direction
-	SPISW_LCD_dat0(0x00);				// 0x00 = RGB sequence (default value)
-	SPISW_LCD_dat0(0x02);				// 0x02 = Grayscale -> 16 (selects 12-bit color, type A)
-	SPISW_LCD_cmd0(S1D15G10_VOLCTR);	// The contrast is set by the Electronic Volume Command (VOLCTR).
-	SPISW_LCD_dat0(28);					// 32 volume value (adjust this setting for your display 0 .. 63)
-	SPISW_LCD_dat0(0);					// 3 resistance ratio (determined by experiment)
-	SPISW_LCD_cmd0(S1D15G10_TMPGRD);	// Temprature gradient
-	SPISW_LCD_dat0(0);					// default value
+	SPISW_LCD_cmd8_0(S1D15G10_DISCTL);	// Display Control
+	SPISW_LCD_dat8_0(0x0d);				// 0x00 = 2 divisions, switching period=8 (default)
+	SPISW_LCD_dat8_0(0x20);				// 0x20 = nlines/4 - 1 = 132/4 - 1 = 32)
+	SPISW_LCD_dat8_0(0x00);				// 0x00 = no inversely highlighted lines
+	SPISW_LCD_cmd8_0(S1D15G10_COMSCN);	// common output scan direction
+	SPISW_LCD_dat8_0(0x01);				// 0x01 = Scan 1->80, 160<-81
+	SPISW_LCD_cmd8_0(S1D15G10_OSCON);	// oscillators on and get out of sleep mode.
+	SPISW_LCD_cmd8_0(S1D15G10_SLPOUT);	// sleep out
+	SPISW_LCD_cmd8_0(S1D15G10_PWRCTR);	// reference voltage regulator on, circuit voltage follower on, BOOST ON
+	SPISW_LCD_dat8_0(0xf);				// everything on, no external reference resistors
+	SPISW_LCD_cmd8_0(S1D15G10_DISNOR);	// display mode
+	SPISW_LCD_cmd8_0(S1D15G10_DISINV);	// display mode
+	SPISW_LCD_cmd8_0(S1D15G10_PTLOUT);	// Partial area off
+	SPISW_LCD_cmd8_0(S1D15G10_DATCTL);	// The DATCTL command selects the display mode (8-bit or 12-bit).
+	SPISW_LCD_dat8_0(0x00);				// 0x01 = page address inverted, col address normal, address scan in col direction
+	SPISW_LCD_dat8_0(0x00);				// 0x00 = RGB sequence (default value)
+	SPISW_LCD_dat8_0(0x02);				// 0x02 = Grayscale -> 16 (selects 12-bit color, type A)
+	SPISW_LCD_cmd8_0(S1D15G10_VOLCTR);	// The contrast is set by the Electronic Volume Command (VOLCTR).
+	SPISW_LCD_dat8_0(28);				// 32 volume value (adjust this setting for your display 0 .. 63)
+	SPISW_LCD_dat8_0(0);				// 3 resistance ratio (determined by experiment)
+	SPISW_LCD_cmd8_0(S1D15G10_TMPGRD);	// Temprature gradient
+	SPISW_LCD_dat8_0(0);				// default value
 	delay_ms(100);
-	SPISW_LCD_dat0(0);
-	SPISW_LCD_cmd0(S1D15G10_DISON);		// display on
+	SPISW_LCD_dat8_0(0);
+	SPISW_LCD_cmd8_0(S1D15G10_DISON);	// display on
+}
+
+/* ********************************************************************* */
+/* LCD Controller: ILI9340                                               */
+/* LCD: xxxxxxxxxx                                                       */
+/* ********************************************************************* */
+
+static void ILI9340_Reset()
+{
+	delay_ms(100);
+	digitalWrite(_resetPin, LOW);
+	delay_ms(1000);
+	digitalWrite(_resetPin, HIGH);
+	delay_ms(100);
+}
+
+static void ILI9340_Initialize()
+{
+	//SPI_Initialize();
+	ILI9340_Reset();
+
+	SPISW_LCD_cmd8_1(0xcb);
+	SPISW_LCD_dat8_1(0x39);
+	SPISW_LCD_dat8_1(0x2c);
+	SPISW_LCD_dat8_1(0x00);
+	SPISW_LCD_dat8_1(0x34);
+	SPISW_LCD_dat8_1(0x02);
+
+	SPISW_LCD_cmd8_1(0xcf);
+	SPISW_LCD_dat8_1(0x00);
+	SPISW_LCD_dat8_1(0xc1);
+	SPISW_LCD_dat8_1(0x30);
+
+	SPISW_LCD_cmd8_1(0xe8);
+	SPISW_LCD_dat8_1(0x85);
+	SPISW_LCD_dat8_1(0x00);
+	SPISW_LCD_dat8_1(0x78);
+
+	SPISW_LCD_cmd8_1(0xea);
+	SPISW_LCD_dat8_1(0x00);
+	SPISW_LCD_dat8_1(0x00);
+
+	SPISW_LCD_cmd8_1(0xed);
+	SPISW_LCD_dat8_1(0x64);
+	SPISW_LCD_dat8_1(0x03);
+	SPISW_LCD_dat8_1(0x12);
+	SPISW_LCD_dat8_1(0x81);
+
+	SPISW_LCD_cmd8_1(0xf7);
+	SPISW_LCD_dat8_1(0x20);
+
+	SPISW_LCD_cmd8_1(0xc0);
+	SPISW_LCD_dat8_1(0x23);
+
+	SPISW_LCD_cmd8_1(0xc1);
+	SPISW_LCD_dat8_1(0x10);
+
+	SPISW_LCD_cmd8_1(0xc5);
+	SPISW_LCD_dat8_1(0x3e);
+	SPISW_LCD_dat8_1(0x28);
+
+	SPISW_LCD_cmd8_1(0xc7);
+	SPISW_LCD_dat8_1(0x86);
+
+	SPISW_LCD_cmd8_1(0x36);
+	SPISW_LCD_dat8_1(0x48);
+
+	SPISW_LCD_cmd8_1(0x3a);
+	SPISW_LCD_dat8_1(0x55);
+
+	SPISW_LCD_cmd8_1(0xb1);
+	SPISW_LCD_dat8_1(0x00);
+	SPISW_LCD_dat8_1(0x18);
+
+	SPISW_LCD_cmd8_1(0xb6);
+	SPISW_LCD_dat8_1(0x08);
+	SPISW_LCD_dat8_1(0x82);
+	SPISW_LCD_dat8_1(0x27);
+
+	SPISW_LCD_cmd8_1(0xf2);
+	SPISW_LCD_dat8_1(0x00);
+
+	SPISW_LCD_cmd8_1(0x26);
+	SPISW_LCD_dat8_1(0x01);
+
+	SPISW_LCD_cmd8_1(0xe0);
+	SPISW_LCD_dat8_1(0x0f);
+	SPISW_LCD_dat8_1(0x31);
+	SPISW_LCD_dat8_1(0x2b);
+	SPISW_LCD_dat8_1(0x0c);
+	SPISW_LCD_dat8_1(0x0e);
+	SPISW_LCD_dat8_1(0x08);
+	SPISW_LCD_dat8_1(0x4e);
+	SPISW_LCD_dat8_1(0xf1);
+	SPISW_LCD_dat8_1(0x37);
+	SPISW_LCD_dat8_1(0x07);
+	SPISW_LCD_dat8_1(0x10);
+	SPISW_LCD_dat8_1(0x03);
+	SPISW_LCD_dat8_1(0x0e);
+	SPISW_LCD_dat8_1(0x09);
+	SPISW_LCD_dat8_1(0x00);
+
+	SPISW_LCD_cmd8_1(0xe1);
+	SPISW_LCD_dat8_1(0x00);
+	SPISW_LCD_dat8_1(0x0e);
+	SPISW_LCD_dat8_1(0x14);
+	SPISW_LCD_dat8_1(0x03);
+	SPISW_LCD_dat8_1(0x11);
+	SPISW_LCD_dat8_1(0x07);
+	SPISW_LCD_dat8_1(0x31);
+	SPISW_LCD_dat8_1(0xc1);
+	SPISW_LCD_dat8_1(0x48);
+	SPISW_LCD_dat8_1(0x08);
+	SPISW_LCD_dat8_1(0x0f);
+	SPISW_LCD_dat8_1(0x0c);
+	SPISW_LCD_dat8_1(0x31);
+	SPISW_LCD_dat8_1(0x36);
+	SPISW_LCD_dat8_1(0x0f);
+
+	SPISW_LCD_cmd8_1(0x11);
+	delay_ms(120);
+
+	SPISW_LCD_cmd8_1(0x29);
+	SPISW_LCD_cmd8_1(0x2c);
+}
+
+static void ILI9340_addrset(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
+{
+	SPISW_LCD_cmd8_1(ILI9340_CASET);
+	SPISW_LCD_dat8_1((uint8_t)(x1>>8));
+	SPISW_LCD_dat8_1((uint8_t)(x1&0xff));
+	SPISW_LCD_dat8_1((uint8_t)(x2>>8));
+	SPISW_LCD_dat8_1((uint8_t)(x2&0xff));
+	SPISW_LCD_cmd8_1(ILI9340_PASET);
+	SPISW_LCD_dat8_1((uint8_t)(y1>>8));
+	SPISW_LCD_dat8_1((uint8_t)(y1&0xff));
+	SPISW_LCD_dat8_1((uint8_t)(y2>>8));
+	SPISW_LCD_dat8_1((uint8_t)(y2&0xff));
+	SPISW_LCD_cmd8_1(ILI9340_RAMWR);
 }
 
 LCDSPI_PARAM lcdspi_param[] = {
@@ -190,74 +401,122 @@ LCDSPI_PARAM lcdspi_param[] = {
 		S1D15G10_SX,
 		S1D15G10_SY,
 	},
+	{
+		ILI9340_Initialize,
+		ILI9340_PASET,
+		ILI9340_CASET,
+		ILI9340_RAMWR,
+		ILI9340_WX,
+		ILI9340_WY,
+		ILI9340_PWX,
+		ILI9340_PWY,
+		ILI9340_SX,
+		ILI9340_SY,
+	},
 };
 
 void LcdSpi::Clear()
 {
-	uint32_t x;
-	SPISW_LCD_cmd0(_PASET);
-	SPISW_LCD_dat0(0);
-	SPISW_LCD_dat0(_PWX-1);
-	SPISW_LCD_cmd0(_CASET);
-	SPISW_LCD_dat0(0);
-	SPISW_LCD_dat0(_PWY-1);
-	SPISW_LCD_cmd0(_RAMWR);
-	for (x = 0; x < ((_PWX * _PWY)/2); x++){
-		SPISW_LCD_dat0(0);
-		SPISW_LCD_dat0(0);
-		SPISW_LCD_dat0(0);
+	int x, y;
+	if (_spihw) {
+		pspi->beginTransaction(pspi->settings_);
+	} else {
+		SPISW_SetPinMode();
+	}
+	if (_lcd_id < 2) {
+		SPISW_LCD_cmd8_0(_PASET);
+		SPISW_LCD_dat8_0(0);
+		SPISW_LCD_dat8_0(_PWX-1);
+		SPISW_LCD_cmd8_0(_CASET);
+		SPISW_LCD_dat8_0(0);
+		SPISW_LCD_dat8_0(_PWY-1);
+		SPISW_LCD_cmd8_0(_RAMWR);
+		for (x = 0; x < ((_PWX * _PWY)/2); x++){
+			SPISW_LCD_dat8_0(0);
+			SPISW_LCD_dat8_0(0);
+			SPISW_LCD_dat8_0(0);
+		}
+	} if (_lcd_id == 2) {
+		ILI9340_addrset(
+				(uint16_t)0,
+				(uint16_t)0,
+				(uint16_t)(_PWX-1),
+				(uint16_t)(_PWY-1));
+		for (y = 0; y < _PWY; y++) {
+			for (x = 0; x < _PWX; x++) {
+				SPISW_LCD_dat8_1(0);
+				SPISW_LCD_dat8_1(0);
+			}
+		}
+	}
+	if (_spihw) {
+		pspi->endTransaction();
+	} else {
+		SPIHW_SetPinMode();
 	}
 	_cx = 0;
 	_cy = 0;
 	return;
 }
 
-LcdSpi::LcdSpi(int num)
-{
-	Initialize(num);
-#if 0
-	_cx = 0;
-	_cy = 0;
-	_fcol = 0xFFFFFF;
-	_bcol = 0x000000;
-	_font_wx = 4;
-	_font_wy = 8;
-	pFont = (Font *)NULL;
-	_PASET = lcdspi_param[num]._PASET;
-	_CASET = lcdspi_param[num]._CASET;
-	_RAMWR = lcdspi_param[num]._RAMWR;
-	_disp_wx = lcdspi_param[num]._disp_wx;
-	_disp_wy = lcdspi_param[num]._disp_wy;
-	_PWX = lcdspi_param[num]._PWX;
-	_PWY = lcdspi_param[num]._PWY;
-	_text_sx = lcdspi_param[num]._text_sx;
-	_text_sy = lcdspi_param[num]._text_sy;
-	lcdspi_param[num].lcdspi_initialize();
-#endif
-};
-
-void LcdSpi::Initialize(int num)
+void LcdSpi::Initialize()
 {
 	_cx = 0;
 	_cy = 0;
-	_fcol = 0xFFFFFF;
-	_bcol = 0x000000;
+	_fcol = (uint16_t)0xFFFFFF;
+	_bcol = (uint16_t)0x000000;
 	_font_wx = 4;
 	_font_wy = 8;
 	pFont = (Font *)NULL;
-	_PASET = lcdspi_param[num]._PASET;
-	_CASET = lcdspi_param[num]._CASET;
-	_RAMWR = lcdspi_param[num]._RAMWR;
-	_disp_wx = lcdspi_param[num]._disp_wx;
-	_disp_wy = lcdspi_param[num]._disp_wy;
-	_PWX = lcdspi_param[num]._PWX;
-	_PWY = lcdspi_param[num]._PWY;
-	_text_sx = lcdspi_param[num]._text_sx;
-	_text_sy = lcdspi_param[num]._text_sy;
-	lcdspi_param[num].lcdspi_initialize();
+	_PASET = lcdspi_param[_lcd_id]._PASET;
+	_CASET = lcdspi_param[_lcd_id]._CASET;
+	_RAMWR = lcdspi_param[_lcd_id]._RAMWR;
+	_disp_wx = lcdspi_param[_lcd_id]._disp_wx;
+	_disp_wy = lcdspi_param[_lcd_id]._disp_wy;
+	_PWX = lcdspi_param[_lcd_id]._PWX;
+	_PWY = lcdspi_param[_lcd_id]._PWY;
+	_text_sx = lcdspi_param[_lcd_id]._text_sx;
+	_text_sy = lcdspi_param[_lcd_id]._text_sy;
+	if (_spihw) {
+		pspi->beginTransaction(pspi->settings_);
+	} else {
+		SPISW_SetPinMode();
+	}
+	lcdspi_param[_lcd_id].lcdspi_initialize();
+	if (_spihw) {
+		pspi->endTransaction();
+	} else {
+		SPIHW_SetPinMode();
+	}
 	Clear();
 	return;
 }
+
+LcdSpi::LcdSpi(int lcd_id, int spihw)
+{
+	_lcd_id = lcd_id;
+	_spihw = spihw;
+	g_spihw = spihw;
+	if (_spihw) {
+		SPIHW_SetPinMode();
+		pinMode(_csPin, OUTPUT);
+		pinMode(_resetPin, OUTPUT);
+		pinMode(_rsPin, OUTPUT);
+		pspi = new Spi2();
+		pspi->setSettings((uint32_t)_clock, (uint8_t)_bitOrder, (uint8_t)_dataMode);
+	} else {
+		SPISW_SetPinMode();
+		SPISW_Initialize();
+	}
+	Initialize();
+};
+
+LcdSpi::~LcdSpi()
+{
+	if (_spihw) {
+		delete pspi;
+	}
+};
 
 void LcdSpi::BitBltEx565(int x, int y, int width, int height, uint32_t data[])
 {
@@ -265,21 +524,36 @@ void LcdSpi::BitBltEx565(int x, int y, int width, int height, uint32_t data[])
 	uint16_t v1, v2;
 	uint16_t *pdata = (uint16_t *)data;
 	//SPISW_LCD_cmd(DATCTL);  // The DATCTL command selects the display mode (8-bit or 12-bit).
-	for (j = 0; j < height; j ++) {
-		SPISW_LCD_cmd0(_PASET);
-		SPISW_LCD_dat0(y + j);
-		SPISW_LCD_dat0(y + j + 1);
-		for (i = 0; i < width; i += 2) {
-			SPISW_LCD_cmd0(_CASET);
-			SPISW_LCD_dat0(x + i);
-			SPISW_LCD_dat0(x + i + 1);
-			v1 = *pdata++;
-			v2 = *pdata++;
-			SPISW_LCD_cmd0(_RAMWR);
-			SPISW_LCD_dat0(R4G4(v1));
-			SPISW_LCD_dat0(B4R4(v1, v2));
-			SPISW_LCD_dat0(G4B4(v2));
+	if (_spihw) {
+		SPIHW_SetPinMode();
+		pspi->beginTransaction(pspi->settings_);
+	} else {
+		SPISW_SetPinMode();
+	}
+	if (_lcd_id < 2) {
+		for (j = 0; j < height; j ++) {
+			SPISW_LCD_cmd8_0(_PASET);
+			SPISW_LCD_dat8_0(y + j);
+			SPISW_LCD_dat8_0(y + j + 1);
+			for (i = 0; i < width; i += 2) {
+				SPISW_LCD_cmd8_0(_CASET);
+				SPISW_LCD_dat8_0(x + i);
+				SPISW_LCD_dat8_0(x + i + 1);
+				v1 = *pdata++;
+				v2 = *pdata++;
+				SPISW_LCD_cmd8_0(_RAMWR);
+				SPISW_LCD_dat8_0(R4G4(v1));
+				SPISW_LCD_dat8_0(B4R4(v1, v2));
+				SPISW_LCD_dat8_0(G4B4(v2));
+			}
 		}
+	} else {
+
+	}
+	if (_spihw) {
+		pspi->endTransaction();
+	} else {
+		SPIHW_SetPinMode();
 	}
 }
 
@@ -302,29 +576,60 @@ void LcdSpi::WriteChar_Color(unsigned char c, int cx, int cy, uint16_t fgcol, ui
 	if (c >= 0x80)
 		c = 0;
 	font = (unsigned char *)pFont->fontData((int)(c & 0x00ff));
-	for (y = 0; y < _font_wy; y++) {
-		SPISW_LCD_cmd0(_PASET);		//y set
-		SPISW_LCD_dat0(cy * _font_wy + y + _text_sy);
-		SPISW_LCD_dat0(_disp_wy - 1);
-		SPISW_LCD_cmd0(_CASET);
-		SPISW_LCD_dat0(cx * _font_wx + _text_sx);
-		SPISW_LCD_dat0(_disp_wx - 1);
-		SPISW_LCD_cmd0(_RAMWR);
-		for (x = 0; x < (_font_wx / 2); x++) {
-			if (font[y] & (0x80 >> (x * 2))) {
-				col0 = fgcol;
-			} else {
-				col0 = bgcol;
+	if (_spihw) {
+		pspi->beginTransaction(pspi->settings_);
+	} else {
+		SPISW_SetPinMode();
+	}
+	if (_lcd_id < 2) {
+		for (y = 0; y < _font_wy; y++) {
+			SPISW_LCD_cmd8_0(_CASET);
+			SPISW_LCD_dat8_0(cx * _font_wx + _text_sx);
+			SPISW_LCD_dat8_0(_disp_wx - 1);
+			SPISW_LCD_cmd8_0(_PASET);		//y set
+			SPISW_LCD_dat8_0(cy * _font_wy + y + _text_sy);
+			SPISW_LCD_dat8_0(_disp_wy - 1);
+			SPISW_LCD_cmd8_0(_RAMWR);
+			for (x = 0; x < (_font_wx / 2); x++) {
+				if (font[y] & (0x80 >> (x * 2))) {
+					col0 = fgcol;
+				} else {
+					col0 = bgcol;
+				}
+				if (font[y] & (0x40 >> (x * 2))) {
+					col1 = fgcol;
+				} else {
+					col1 = bgcol;
+				}
+				SPISW_LCD_dat8_0((0xff & (uint8_t) (col0 >> 4)));
+				SPISW_LCD_dat8_0(
+						(0xf0 & (uint8_t) (col0 << 4))
+								| (0x0f & ((uint8_t) (col1 >> 8))));
+				SPISW_LCD_dat8_0((uint8_t) (0xff & col1));
 			}
-			if (font[y] & (0x40 >> (x * 2))) {
-				col1 = fgcol;
-			} else {
-				col1 = bgcol;
-			}
-			SPISW_LCD_dat0((0xff & (uint8_t)(col0 >> 4)));
-			SPISW_LCD_dat0((0xf0 & (uint8_t)(col0 << 4)) | (0x0f & ((uint8_t)(col1 >> 8))));
-			SPISW_LCD_dat0((uint8_t)(0xff & col1));
 		}
+	} if (_lcd_id == 2) {
+		for (y = 0; y < _font_wy; y++) {
+			ILI9340_addrset(
+					(uint16_t)(cx * _font_wx + _text_sx),
+					(uint16_t)(cy * _font_wy + y + _text_sy),
+					(uint16_t)(_disp_wx - 1),
+					(uint16_t)(_disp_wy - 1));
+			for (x = 0; x < _font_wx; x++) {
+				if (font[y] & (0x80 >> x)) {
+					col0 = fgcol;
+				} else {
+					col0 = bgcol;
+				}
+				SPISW_LCD_dat8_1((uint8_t)(col0 >> 8));
+				SPISW_LCD_dat8_1((uint8_t)col0);
+			}
+		}
+	}
+	if (_spihw) {
+		pspi->endTransaction();
+	} else {
+		SPIHW_SetPinMode();
 	}
 }
 
@@ -371,6 +676,107 @@ Font *LcdSpi::GetFont()
 	return pFont;
 }
 
+// https://ja.wikipedia.org/wiki/Windows_bitmap
+#define BMP_HEADER_SIZE	0x8a
+char BmpHeader[BMP_HEADER_SIZE];
+
+int LcdSpi::DispBmpSd(int x, int y, const char *filename)
+{
+	File fp;
+	int ofs, wx, wy, depth, lineBytes, bufSize;
+	int bitmapDy = 1;
+
+	if (SD.exists(filename) != true) {
+		DEBUG_PRINT("File doesn't exist", filename);
+		return -1;
+	}
+	fp = SD.open(filename, FILE_READ);
+	if (!fp) {
+		DEBUG_PRINT("File can't be opened", filename);
+		return -1;
+	}
+	fp.readBytes((char *)BmpHeader, BMP_HEADER_SIZE);
+	ofs = (int)*((uint32_t *)&BmpHeader[0x0a]);
+	wx = (int)*((uint32_t *)&BmpHeader[0x12]);
+	wy = (int)*((uint32_t *)&BmpHeader[0x16]);
+    depth = (int)*((uint16_t *)&BmpHeader[0x1c]);
+    lineBytes = wx * depth / 8;
+    bufSize = lineBytes * bitmapDy;
+	DEBUG_PRINT("headSize=", headSize);
+	DEBUG_PRINT("wx=", wx);
+	DEBUG_PRINT("wy=", wy);
+	DEBUG_PRINT("depth=", depth);
+	DEBUG_PRINT("bufSize=", bufSize);
+    unsigned char *bitmapOneLine = (unsigned char *)malloc(bufSize);
+    if (!bitmapOneLine) {
+		DEBUG_PRINT("Memory allocation failed.", -1);
+	    fp.close();
+    	return -1;
+    }
+    fp.seek((uint32_t)ofs);
+    if (depth == 16) {
+    	for (int ty = wy - 1 - bitmapDy; ty >= 0; ty -= bitmapDy) {
+    		fp.readBytes((char *)bitmapOneLine, bufSize);
+    		BitBltEx565(x, y + ty, wx, bitmapDy, (uint32_t *)bitmapOneLine);
+    	}
+    } else if (depth == 24) {
+    	for (int ty = wy - 1 - bitmapDy; ty >= 0; ty -= bitmapDy) {
+    		fp.readBytes((char *)bitmapOneLine, bufSize);
+    		for (int i = 0; i < wx; i++) {
+    			uint16_t b = (uint16_t)bitmapOneLine[i*3];
+    			uint16_t g = (uint16_t)bitmapOneLine[i*3+1];
+    			uint16_t r = (uint16_t)bitmapOneLine[i*3+2];
+    			uint16_t v = (b >> 3) + ((g >> 2) << 5) + ((r >> 3) << 11);
+    			bitmapOneLine[i*2] = (uint8_t)(v);
+    			bitmapOneLine[i*2+1] = (uint8_t)(v >> 8);
+    		}
+    		BitBltEx565(x, y + ty, wx, bitmapDy, (uint32_t *)bitmapOneLine);
+    	}
+    }
+    if (bitmapOneLine) {
+    	free(bitmapOneLine);
+    }
+	return 1;
+}
+
+unsigned short display[64][128];
+
+int LcdSpi::DispJpegSd(int x, int y, const char *filename)
+{
+	sJpeg jpeg;
+	uint8_t *img;
+	int cx, cy;
+	int dDiv = 2;
+
+	jpeg.decode((char *)filename, 0);
+	if (jpeg.err != 0)
+		return -1;
+	while (jpeg.read()) {
+		img = jpeg.pImage;
+        for (int ty = 0; ty < jpeg.MCUHeight(); ty++) {
+            for (int tx = 0; tx < jpeg.MCUWidth(); tx++) {
+                cx = jpeg.MCUx * jpeg.MCUWidth() + tx;
+                cy = (jpeg.MCUy * jpeg.MCUHeight()) % (_disp_wx / dDiv) + ty;
+                if ((cx < jpeg.decoded_width) && (cy < jpeg.decoded_height)) {
+                    if (jpeg.comps == 1) {
+                        if ((cx < _disp_wx) && (cy < _disp_wy/dDiv))
+                           display[cy][cx] = (((img[0]>>3)<<11))|(((img[0]>>2)<<5))|((img[0]>>3));
+                    } else {
+                        if ((cx < _disp_wx) && (cy < _disp_wy/dDiv))
+                           display[cy][cx] = (((img[0]>>3)<<11))|(((img[1]>>2)<<5))|((img[2]>>3));
+                    }
+                }
+                img += jpeg.comps;
+            }
+        }
+	}
+	DEBUG_PRINT("err=", err);
+	if (jpeg.err == 0 || jpeg.err == PJPG_NO_MORE_BLOCKS) {
+		BitBltEx(x, y, jpeg.width(), jpeg.height(), (uint32_t *)display);
+	}
+	return 1;
+}
+
 //**************************************************
 // メモリの開放時に走る
 //**************************************************
@@ -386,12 +792,26 @@ static struct mrb_data_type lcdspi_type = { "LcdSpi", lcdspi_free };
 
 mrb_value mrb_sLcdSpi_initialize(mrb_state *mrb, mrb_value self)
 {
-	int lcdspi_num;
+	int lcdspi_id;
+	int spihw;
+	int cs, clk, dout, reset, rs, din;
+	int n;
 	DATA_TYPE(self) = &lcdspi_type;
 	DATA_PTR(self) = NULL;
-	mrb_get_args(mrb, "i", &lcdspi_num);
-	LcdSpi *lcdspi = new LcdSpi(lcdspi_num);
-	lcdspi->Initialize(lcdspi_num);
+	n = mrb_get_args(mrb, "ii|iiiiii", &lcdspi_id, &spihw, &cs, &clk, &dout, &reset, &rs, &din);
+	if ((n >= 2) && (cs != -1))
+		_csPin = (uint8_t)cs;
+	if ((n >= 3) && (clk != -1))
+		_clkPin = (uint8_t)clk;
+	if ((n >= 4) && (dout != -1))
+		_doutPin = (uint8_t)dout;
+	if ((n >= 5) && (reset != -1))
+		_resetPin = (uint8_t)reset;
+	if ((n >= 6) && (rs != -1))
+		_rsPin = (uint8_t)rs;
+	if ((n >= 7) && (din != -1))
+		_dinPin = (uint8_t)din;
+	LcdSpi *lcdspi = new LcdSpi(lcdspi_id, spihw);
 	DATA_PTR(self) = lcdspi;
 	return self;
 }
@@ -462,6 +882,59 @@ mrb_value mrb_sLcdSpi_puts(mrb_state *mrb, mrb_value self)
 	}
 }
 
+mrb_value mrb_sLcdSpi_BitBlt(mrb_state *mrb, mrb_value self)
+{
+	LcdSpi* lcdspi = static_cast<LcdSpi*>(mrb_get_datatype(mrb, self, &lcdspi_type));
+	mrb_value vbuf;
+	int x, y, width, height;
+	unsigned char *buf;
+	mrb_get_args(mrb, "iiiiS", &x, &y, &width, &height, &vbuf);
+	buf = (unsigned char *)RSTRING_PTR(vbuf);
+#ifdef TEST_LCDSPI
+	buf = (unsigned char *)testBmpData;
+#endif
+	DEBUG_PRINT("x=", x);
+	DEBUG_PRINT("y=", y);
+	DEBUG_PRINT("w=", width);
+	DEBUG_PRINT("h=", height);
+	lcdspi->BitBltEx(x, y, width, height, (uint32_t *)buf);
+	return mrb_fixnum_value(0);
+}
+
+mrb_value mrb_sLcdSpi_dispBmpSd(mrb_state *mrb, mrb_value self)
+{
+	LcdSpi* lcdspi = static_cast<LcdSpi*>(mrb_get_datatype(mrb, self, &lcdspi_type));
+	mrb_value vfn;
+	int x, y;
+	char *fn;
+	int ret;
+	if (!sdcard_Init(mrb)) {
+		DEBUG_PRINT("SD Failed: ", 2);
+		return mrb_fixnum_value(2);
+	}
+	mrb_get_args(mrb, "iiS", &x, &y, &vfn);
+	fn = RSTRING_PTR(vfn);
+	ret = lcdspi->DispBmpSd(x, y, fn);
+	return mrb_fixnum_value(ret);
+}
+
+mrb_value mrb_sLcdSpi_dispJpegSd(mrb_state *mrb, mrb_value self)
+{
+	LcdSpi* lcdspi = static_cast<LcdSpi*>(mrb_get_datatype(mrb, self, &lcdspi_type));
+	mrb_value vfn;
+	int x, y;
+	char *fn;
+	int ret;
+	if (!sdcard_Init(mrb)) {
+		DEBUG_PRINT("SD Failed: ", 2);
+		return mrb_fixnum_value(2);
+	}
+	mrb_get_args(mrb, "iiS", &x, &y, &vfn);
+	fn = RSTRING_PTR(vfn);
+	ret = lcdspi->DispJpegSd(x, y, fn);
+	return mrb_fixnum_value(ret);
+}
+
 //**************************************************
 // ライブラリを定義します
 //**************************************************
@@ -470,10 +943,13 @@ void lcdSpi_Init(mrb_state *mrb)
 	struct RClass *sLcdSpiModule = mrb_define_class(mrb, "LcdSpi", mrb->object_class);
 	MRB_SET_INSTANCE_TT(sLcdSpiModule, MRB_TT_DATA);
 
-	mrb_define_module_function(mrb, sLcdSpiModule, "initialize", mrb_sLcdSpi_initialize, MRB_ARGS_REQ(1));
+	mrb_define_module_function(mrb, sLcdSpiModule, "initialize", mrb_sLcdSpi_initialize, MRB_ARGS_REQ(2)|MRB_ARGS_OPT(6));
 	mrb_define_module_function(mrb, sLcdSpiModule, "clear", mrb_sLcdSpi_clear, MRB_ARGS_REQ(0));
 	mrb_define_module_function(mrb, sLcdSpiModule, "set_font", mrb_sLcdSpi_set_font, MRB_ARGS_REQ(1));
 	mrb_define_module_function(mrb, sLcdSpiModule, "putxy", mrb_sLcdSpi_putxy, MRB_ARGS_REQ(3));
 	mrb_define_module_function(mrb, sLcdSpiModule, "putc", mrb_sLcdSpi_putc, MRB_ARGS_REQ(1));
 	mrb_define_module_function(mrb, sLcdSpiModule, "puts", mrb_sLcdSpi_puts, MRB_ARGS_REQ(1));
+	mrb_define_module_function(mrb, sLcdSpiModule, "BitBlt", mrb_sLcdSpi_BitBlt, MRB_ARGS_REQ(5));
+	mrb_define_module_function(mrb, sLcdSpiModule, "dispBmpSD", mrb_sLcdSpi_dispBmpSd, MRB_ARGS_REQ(3));
+	mrb_define_module_function(mrb, sLcdSpiModule, "dispJpegSD", mrb_sLcdSpi_dispJpegSd, MRB_ARGS_REQ(3));
 }

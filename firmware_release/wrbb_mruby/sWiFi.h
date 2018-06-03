@@ -17,4 +17,9 @@
 //**************************************************
 int esp8266_Init(mrb_state *mrb);
 
+uint32_t ntp(char *ipaddr, int tf);
+int wifi_getSD(char *strURL, char *strFname, int n, char **head, int ssl);
+int wifi_postSD(char *strURL, char *strSFname, char *strDFname, int n, char **head, int ssl);
+int wifi_post(char *strURL, char *strData, char *strDFname, int n, char **head, int ssl);
+
 #endif // _SWIFI_H_

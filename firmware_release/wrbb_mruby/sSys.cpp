@@ -27,8 +27,10 @@
 	#include "sWiFi.h"
 #endif
 
+#ifdef MR_MP3
 #if BOARD == BOARD_GR || FIRMWARE == SDBT || FIRMWARE == SDWF || BOARD == BOARD_P05 || (BOARD == BOARD_P06 && FIRMWARE == CITRUS)
 	#include "sMp3.h"
+#endif
 #endif
 
 #define EEPROMADDRESS	0xFF
@@ -249,10 +251,13 @@ mrb_value Is_useMp3(mrb_state *mrb, mrb_value self, int mode)
 {
 int ret = 0;
 
+#ifdef MR_MP3
 #if BOARD == BOARD_GR || FIRMWARE == SDBT || FIRMWARE == SDWF || BOARD == BOARD_P05 || (BOARD == BOARD_P06 && FIRMWARE == CITRUS)
 	ret = mp3_Init(mrb);		//MP3関連メソッドの設定
 #endif
-
+#else
+	ret = -1;
+#endif
 	return (mode == 0?mrb_fixnum_value(ret):mrb_bool_value(ret == 1));
 }
 
@@ -299,6 +304,7 @@ int ret = 0;
 			return Is_useWiFi(mrb, self, 1);
 		}
 	}
+#ifdef MR_MP3
 #if BOARD == BOARD_GR || FIRMWARE == SDBT || FIRMWARE == SDWF || BOARD == BOARD_P05 || (BOARD == BOARD_P06 && FIRMWARE == CITRUS)
 	else if(strcmp(strName, MP3_CLASS) == 0){
 		if(n == 1){
@@ -313,6 +319,7 @@ int ret = 0;
 			ret = mp3_Init(mrb, pp, sp);		//MP3関連メソッドの設定
 		}
 	}
+#endif
 #endif
 	return (mode == 0?mrb_fixnum_value(ret):mrb_bool_value(ret == 1));
 }

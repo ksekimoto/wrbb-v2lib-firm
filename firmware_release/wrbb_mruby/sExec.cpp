@@ -104,7 +104,9 @@ bool RubyRun(void)
 	serial_Init(mrb);	//シリアル通信関連メソッドの設定
 	mem_Init(mrb);		//ファイル関連メソッドの設定
 	i2c_Init(mrb);		//I2C関連メソッドの設定
+#ifndef GRSAKURA
 	servo_Init(mrb);	//サーボ関連メソッドの設定
+#endif
 	spi_Init(mrb);		//SPI関連のメソッドの設定
 	font_Init(mrb);		//Font関連のメソッドの設定
 	lcdSpi_Init(mrb);	//Lcd関連のメソッドの設定
@@ -115,8 +117,10 @@ bool RubyRun(void)
 	rtc_Init(mrb);		//RTC関連メソッドの設定
 #endif
 
+#ifndef GRSAKURA
 #ifdef SAMBOUKAN
 	dcMotor_Init(mrb);		//SAMBOUKAの Motorクラス
+#endif
 #endif
 
 	//#if FIRMWARE == JAM

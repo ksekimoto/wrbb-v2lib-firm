@@ -7,6 +7,7 @@
         "boardPath": "COM3"
     },
     "rubicVersion": {
-        "last": "0.99.15"
+        "last": "0.99.17",
+        "min": "0.99.15"
     }
 }

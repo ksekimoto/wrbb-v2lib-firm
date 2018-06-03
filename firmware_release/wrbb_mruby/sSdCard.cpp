@@ -18,6 +18,13 @@
 #include "../wrbb.h"
 #include "sSdCard.h"
 
+//#define	DEBUG		// Define if you want to debug
+#ifdef DEBUG
+#  define DEBUG_PRINT(m,v)    { Serial.print("** "); Serial.print((m)); Serial.print(":"); Serial.println((v)); }
+#else
+#  define DEBUG_PRINT(m,v)    // do nothing
+#endif
+
 File Fp[2];
 bool SdBeginFlag = false;	//SD.begin()で1が返ってきたら true となる
 bool SdClassFlag = false;
@@ -44,6 +51,11 @@ int ret = 0;
 		ret = 1;
 	}
 
+	if (ret == 1) {
+		DEBUG_PRINT("File exists", str);
+	} else {
+		DEBUG_PRINT("File doesn't exist", str);
+	}
 	return mrb_fixnum_value( ret );
 }
 
@@ -494,6 +506,7 @@ RTC_TIMETYPE timertc;
 int SD_init(char *filename)
 {
 	if(!SdBeginFlag && !SD.begin()){
+		DEBUG_PRINT("SD_init NG", 0);
 		return 0;
 	}
 	SdBeginFlag = true;
@@ -501,13 +514,16 @@ int SD_init(char *filename)
 	//Serial.println("SD find");
 
 	if(filename == NULL){
+		DEBUG_PRINT("SD_init OK", 1);
 		return 1;
 	}
 	
 	//SDカードのmrbファイルを探します
 	if(SD.exists(filename) == false){
+		DEBUG_PRINT("SD_init NG", 0);
 		return 0;
 	}	
+	DEBUG_PRINT("SD_init OK", 1);
 	return 1;
 }
 

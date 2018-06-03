@@ -10,7 +10,7 @@
 #ifndef SFONT4X8_DATA_H_
 #define SFONT4X8_DATA_H_
 
-static unsigned char misaki_font4x8_data[] = {
+static const unsigned char misaki_font4x8_data[] = {
 // Unicode=0x0000
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 // Unicode=0x0001

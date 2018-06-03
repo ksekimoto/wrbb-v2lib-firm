@@ -1,38 +1,382 @@
-SRCFILES = ./gr_sketch.cpp ./gr_common/core/HardwareSerial.cpp ./gr_common/core/main.cpp ./gr_common/core/new.cpp ./gr_common/core/Print.cpp ./gr_common/core/Stream.cpp ./gr_common/core/Tone.cpp ./gr_common/core/usbdescriptors.c ./gr_common/core/usb_cdc.c ./gr_common/core/usb_core.c ./gr_common/core/usb_hal.c ./gr_common/core/utilities.cpp ./gr_common/core/WInterrupts.c ./gr_common/core/wiring.c ./gr_common/core/wiring_analog.c ./gr_common/core/wiring_digital.c ./gr_common/core/wiring_pulse.c ./gr_common/core/wiring_shift.c ./gr_common/core/WMath.cpp ./gr_common/core/WString.cpp ./gr_common/core/avr/avrlib.c ./gr_common/lib/DSP/DSP.cpp ./gr_common/lib/EEPROM/EEPROM.cpp ./gr_common/lib/EEPROM/utility/r_flash_api_rx600.c ./gr_common/lib/Firmata/Firmata.cpp ./gr_common/lib/LiquidCrystal/LiquidCrystal.cpp ./gr_common/lib/MsTimer2/MsTimer2.cpp ./gr_common/lib/RTC/RTC.cpp ./gr_common/lib/RTC/utility/RX63_RTC.cpp ./gr_common/lib/SD/File.cpp ./gr_common/lib/SD/SD.cpp ./gr_common/lib/SD/utility/Sd2Card.cpp ./gr_common/lib/SD/utility/SdFile.cpp ./gr_common/lib/SD/utility/SdVolume.cpp ./gr_common/lib/Servo/Servo.cpp ./gr_common/lib/SoftwareSerial/SoftwareSerial.cpp ./gr_common/lib/SPI/SPI.cpp ./gr_common/lib/Stepper/Stepper.cpp ./gr_common/lib/Wire/Wire.cpp ./gr_common/lib/Wire/utility/I2cMaster.cpp ./gr_common/lib/Wire/utility/twi_rx.c ./gr_common/rx63n/exception_handler.cpp ./gr_common/rx63n/hardware_setup.cpp ./gr_common/rx63n/interrupt_handlers.c ./gr_common/rx63n/reboot.c ./gr_common/rx63n/reset_program.asm ./gr_common/rx63n/util.c ./gr_common/rx63n/vector_table.c \
-	./wrbb_eepfile/eepfile.cpp ./wrbb_eepfile/eeploader.cpp \
-	./wrbb_mruby/sExec.cpp ./wrbb_mruby/sFont.cpp ./wrbb_mruby/sI2c.cpp ./wrbb_mruby/sKernel.cpp  ./wrbb_mruby/sLcdSpi.cpp ./wrbb_mruby/sMem.cpp ./wrbb_mruby/sRtc.cpp ./wrbb_mruby/sSdCard.cpp ./wrbb_mruby/sSerial.cpp ./wrbb_mruby/sServo.cpp ./wrbb_mruby/sSpi.cpp ./wrbb_mruby/sSys.cpp ./wrbb_mruby/sWiFi.cpp ./wrbb_mruby/sMp3.cpp ./wrbb_mruby/sGlobal.cpp \
-	./WavMp3p/WavMp3p.cpp ./WavMp3p/libmad-0.15.1b/bit.c ./WavMp3p/libmad-0.15.1b/decoder.c ./WavMp3p/libmad-0.15.1b/fixed.c ./WavMp3p/libmad-0.15.1b/frame.c ./WavMp3p/libmad-0.15.1b/huffman.c ./WavMp3p/libmad-0.15.1b/layer12.c ./WavMp3p/libmad-0.15.1b/layer3.c ./WavMp3p/libmad-0.15.1b/minimad.c ./WavMp3p/libmad-0.15.1b/stream.c ./WavMp3p/libmad-0.15.1b/synth.c ./WavMp3p/libmad-0.15.1b/timer.c ./WavMp3p/libmad-0.15.1b/version.c ./WavMp3p/utility/wavmp3p_audio.c ./WavMp3p/utility/wavmp3p_ctrl.c ./WavMp3p/utility/wavmp3p_dma.c ./WavMp3p/utility/wavmp3p_gpio.c ./WavMp3p/utility/wavmp3p_icu.c ./WavMp3p/utility/wavmp3p_init.c ./WavMp3p/utility/wavmp3p_play.cpp ./WavMp3p/utility/wavmp3p_play_mp3.c ./WavMp3p/utility/wavmp3p_play_wav.c ./WavMp3p/utility/wavmp3p_pwm.c
-OBJFILES = ./gr_sketch.o ./gr_common/core/HardwareSerial.o ./gr_common/core/main.o ./gr_common/core/new.o ./gr_common/core/Print.o ./gr_common/core/Stream.o ./gr_common/core/Tone.o ./gr_common/core/utilities.o ./gr_common/core/WMath.o ./gr_common/core/WString.o ./gr_common/lib/DSP/DSP.o ./gr_common/lib/EEPROM/EEPROM.o ./gr_common/lib/Firmata/Firmata.o ./gr_common/lib/LiquidCrystal/LiquidCrystal.o ./gr_common/lib/MsTimer2/MsTimer2.o ./gr_common/lib/RTC/RTC.o ./gr_common/lib/RTC/utility/RX63_RTC.o ./gr_common/lib/SD/File.o ./gr_common/lib/SD/SD.o ./gr_common/lib/SD/utility/Sd2Card.o ./gr_common/lib/SD/utility/SdFile.o ./gr_common/lib/SD/utility/SdVolume.o ./gr_common/lib/Servo/Servo.o ./gr_common/lib/SoftwareSerial/SoftwareSerial.o ./gr_common/lib/SPI/SPI.o ./gr_common/lib/Stepper/Stepper.o ./gr_common/lib/Wire/Wire.o ./gr_common/lib/Wire/utility/I2cMaster.o ./gr_common/rx63n/exception_handler.o ./gr_common/rx63n/hardware_setup.o \
-	./wrbb_eepfile/eepfile.o \
-	./wrbb_eepfile/eeploader.o \
-	./wrbb_mruby/sExec.o \
-    ./wrbb_mruby/sFont.o \
-	./wrbb_mruby/sGlobal.o \
-	./wrbb_mruby/sI2c.o \
-	./wrbb_mruby/sKernel.o \
-	./wrbb_mruby/sLcdSpi.o \
-	./wrbb_mruby/sMem.o \
-	./wrbb_mruby/sRtc.o \
-	./wrbb_mruby/sSdCard.o \
-	./wrbb_mruby/sSerial.o \
-	./wrbb_mruby/sServo.o \
-    ./wrbb_mruby/sSpi.o \
-	./wrbb_mruby/sSys.o \
-	./wrbb_mruby/sWiFi.o \
-	./wrbb_mruby/sMp3.o \
-	./WavMp3p/WavMp3p.o ./WavMp3p/utility/wavmp3p_play.o \
-	./wrbb_mruby/sDCMotor.o \
-	./gr_common/core/usbdescriptors.o ./gr_common/core/usb_cdc.o ./gr_common/core/usb_core.o ./gr_common/core/usb_hal.o ./gr_common/core/WInterrupts.o ./gr_common/core/wiring.o ./gr_common/core/wiring_analog.o ./gr_common/core/wiring_digital.o ./gr_common/core/wiring_pulse.o ./gr_common/core/wiring_shift.o ./gr_common/core/avr/avrlib.o ./gr_common/lib/EEPROM/utility/r_flash_api_rx600.o ./gr_common/lib/Wire/utility/twi_rx.o ./gr_common/rx63n/interrupt_handlers.o ./gr_common/rx63n/reboot.o ./gr_common/rx63n/util.o ./gr_common/rx63n/vector_table.o \
-	./WavMp3p/libmad-0.15.1b/bit.o ./WavMp3p/libmad-0.15.1b/decoder.o ./WavMp3p/libmad-0.15.1b/fixed.o ./WavMp3p/libmad-0.15.1b/frame.o ./WavMp3p/libmad-0.15.1b/huffman.o ./WavMp3p/libmad-0.15.1b/layer12.o ./WavMp3p/libmad-0.15.1b/layer3.o ./WavMp3p/libmad-0.15.1b/minimad.o ./WavMp3p/libmad-0.15.1b/stream.o ./WavMp3p/libmad-0.15.1b/synth.o ./WavMp3p/libmad-0.15.1b/timer.o ./WavMp3p/libmad-0.15.1b/version.o ./WavMp3p/utility/wavmp3p_audio.o ./WavMp3p/utility/wavmp3p_ctrl.o ./WavMp3p/utility/wavmp3p_dma.o ./WavMp3p/utility/wavmp3p_gpio.o ./WavMp3p/utility/wavmp3p_icu.o ./WavMp3p/utility/wavmp3p_init.o ./WavMp3p/utility/wavmp3p_play_mp3.o ./WavMp3p/utility/wavmp3p_play_wav.o ./WavMp3p/utility/wavmp3p_pwm.o \
-	./gr_common/rx63n/reset_program.o
-LIBFILES = ./gr_common/lib/DSP/utility/libGNU_RX_DSP_Little.a ./wrbb_mruby/libmruby.a
-CCINC = -I./gr_build -I./gr_common -I./gr_common/core -I./gr_common/core/avr -I./gr_common/lib -I./gr_common/lib/DSP -I./gr_common/lib/DSP/utility -I./gr_common/lib/EEPROM -I./gr_common/lib/EEPROM/utility -I./gr_common/lib/Firmata -I./gr_common/lib/LiquidCrystal -I./gr_common/lib/MsTimer2 -I./gr_common/lib/RTC -I./gr_common/lib/RTC/utility -I./gr_common/lib/SD -I./gr_common/lib/SD/utility -I./gr_common/lib/Servo -I./gr_common/lib/SoftwareSerial -I./gr_common/lib/SPI -I./gr_common/lib/Stepper -I./gr_common/lib/Wire -I./gr_common/lib/Wire/utility -I./gr_common/rx63n -I./USB_Driver \
-	-I./wrbb_eepfile -I./wrbb_mruby -I./wrbb_mruby/include -I./wrbb_mruby/include/mruby \
-	-I./WavMp3p -I./WavMp3p/libmad-0.15.1b -I./WavMp3p/libmad-0.15.1b/msvc++ -I./WavMp3p/utility
-HEADERFILES = ./wrbb.h ./gr_common/core/Arduino.h ./gr_common/core/binary.h ./gr_common/core/HardwareSerial.h ./gr_common/core/HardwareSerial_private.h ./gr_common/core/new.h ./gr_common/core/pins_arduino.h ./gr_common/core/Print.h ./gr_common/core/Printable.h ./gr_common/core/Stream.h ./gr_common/core/Types.h ./gr_common/core/usbdescriptors.h ./gr_common/core/usb_cdc.h ./gr_common/core/usb_common.h ./gr_common/core/usb_core.h ./gr_common/core/usb_hal.h ./gr_common/core/utilities.h ./gr_common/core/WCharacter.h ./gr_common/core/wiring_private.h ./gr_common/core/WString.h ./gr_common/core/avr/avrlib.h ./gr_common/core/avr/pgmspace.h ./gr_common/lib/DSP/DSP.h ./gr_common/lib/DSP/utility/r_dsp_complex.h ./gr_common/lib/DSP/utility/r_dsp_filters.h ./gr_common/lib/DSP/utility/r_dsp_matrix.h ./gr_common/lib/DSP/utility/r_dsp_statistical.h ./gr_common/lib/DSP/utility/r_dsp_transform.h ./gr_common/lib/DSP/utility/r_dsp_typedefs.h ./gr_common/lib/DSP/utility/r_dsp_types.h ./gr_common/lib/EEPROM/EEPROM.h ./gr_common/lib/EEPROM/utility/r_flash_api_rx600.h ./gr_common/lib/Firmata/Boards.h ./gr_common/lib/Firmata/Firmata.h ./gr_common/lib/LiquidCrystal/LiquidCrystal.h ./gr_common/lib/MsTimer2/MsTimer2.h ./gr_common/lib/RTC/RTC.h ./gr_common/lib/RTC/utility/RX63_RTC.h ./gr_common/lib/SD/SD.h ./gr_common/lib/SD/utility/FatStructs.h ./gr_common/lib/SD/utility/Sd2Card.h ./gr_common/lib/SD/utility/Sd2PinMap.h ./gr_common/lib/SD/utility/SdFat.h ./gr_common/lib/SD/utility/SdFatmainpage.h ./gr_common/lib/SD/utility/SdFatUtil.h ./gr_common/lib/SD/utility/SdInfo.h ./gr_common/lib/Servo/Servo.h ./gr_common/lib/SoftwareSerial/SoftwareSerial.h ./gr_common/lib/SPI/SPI.h ./gr_common/lib/Stepper/Stepper.h ./gr_common/lib/Wire/Wire.h ./gr_common/lib/Wire/utility/I2cMaster.h ./gr_common/lib/Wire/utility/twi_rx.h ./gr_common/rx63n/interrupt_handlers.h ./gr_common/rx63n/iodefine.h ./gr_common/rx63n/iodefine_gcc63n.h ./gr_common/rx63n/reboot.h ./gr_common/rx63n/rx63n_stdio.h ./gr_common/rx63n/specific_instructions.h ./gr_common/rx63n/typedefine.h ./gr_common/rx63n/user_interrupt.h ./gr_common/rx63n/util.h \
-	./wrbb_eepfile/eepfile.h ./wrbb_eepfile/eeploader.h ./wrbb_mruby/sExec.h ./wrbb_mruby/sFont.h ./wrbb_mruby/sI2c.h ./wrbb_mruby/sKernel.h ./wrbb_mruby/sMem.h ./wrbb_mruby/sRtc.h ./wrbb_mruby/sSdCard.h ./wrbb_mruby/sSerial.h ./wrbb_mruby/sServo.h ./wrbb_mruby/sSpi.h ./wrbb_mruby/sSys.h ./wrbb_mruby/sWiFi.h ./wrbb_mruby/sMp3.h ./wrbb_mruby/sGlobal.h \
-	./wrbb_mruby/include/mrbconf.h ./wrbb_mruby/include/mruby.h ./wrbb_mruby/include/mruby/array.h ./wrbb_mruby/include/mruby/boxing_nan.h ./wrbb_mruby/include/mruby/boxing_no.h ./wrbb_mruby/include/mruby/boxing_word.h ./wrbb_mruby/include/mruby/class.h ./wrbb_mruby/include/mruby/common.h ./wrbb_mruby/include/mruby/compile.h ./wrbb_mruby/include/mruby/data.h ./wrbb_mruby/include/mruby/debug.h ./wrbb_mruby/include/mruby/dump.h ./wrbb_mruby/include/mruby/error.h ./wrbb_mruby/include/mruby/gc.h ./wrbb_mruby/include/mruby/hash.h ./wrbb_mruby/include/mruby/irep.h ./wrbb_mruby/include/mruby/khash.h ./wrbb_mruby/include/mruby/numeric.h ./wrbb_mruby/include/mruby/object.h ./wrbb_mruby/include/mruby/opcode.h ./wrbb_mruby/include/mruby/proc.h ./wrbb_mruby/include/mruby/range.h ./wrbb_mruby/include/mruby/re.h ./wrbb_mruby/include/mruby/string.h ./wrbb_mruby/include/mruby/throw.h ./wrbb_mruby/include/mruby/value.h ./wrbb_mruby/include/mruby/variable.h ./wrbb_mruby/include/mruby/version.h \
-	./WavMp3p/WavMp3p.h ./WavMp3p/libmad-0.15.1b/bit.h ./WavMp3p/libmad-0.15.1b/config.h.in ./WavMp3p/libmad-0.15.1b/decoder.h ./WavMp3p/libmad-0.15.1b/fixed.h ./WavMp3p/libmad-0.15.1b/frame.h ./WavMp3p/libmad-0.15.1b/global.h ./WavMp3p/libmad-0.15.1b/huffman.h ./WavMp3p/libmad-0.15.1b/layer12.h ./WavMp3p/libmad-0.15.1b/layer3.h ./WavMp3p/libmad-0.15.1b/mad.h ./WavMp3p/libmad-0.15.1b/stream.h ./WavMp3p/libmad-0.15.1b/synth.h ./WavMp3p/libmad-0.15.1b/timer.h ./WavMp3p/libmad-0.15.1b/version.h ./WavMp3p/libmad-0.15.1b/msvc++/config.h ./WavMp3p/libmad-0.15.1b/msvc++/mad.h ./WavMp3p/utility/wavmp3p_audio.h ./WavMp3p/utility/wavmp3p_ctrl.h ./WavMp3p/utility/wavmp3p_dma.h ./WavMp3p/utility/wavmp3p_gpio.h ./WavMp3p/utility/wavmp3p_icu.h ./WavMp3p/utility/wavmp3p_init.h ./WavMp3p/utility/wavmp3p_play.h ./WavMp3p/utility/wavmp3p_play_mp3.h ./WavMp3p/utility/wavmp3p_play_wav.h ./WavMp3p/utility/wavmp3p_pwm.h
+SRCFILES = ./gr_sketch.cpp 
+SRCFILES += ./gr_common/core/HardwareSerial.cpp 
+SRCFILES += ./gr_common/core/main.cpp 
+SRCFILES += ./gr_common/core/new.cpp 
+SRCFILES += ./gr_common/core/Print.cpp 
+SRCFILES += ./gr_common/core/Stream.cpp 
+SRCFILES += ./gr_common/core/Tone.cpp 
+SRCFILES += ./gr_common/core/usbdescriptors.c 
+SRCFILES += ./gr_common/core/usb_cdc.c 
+SRCFILES += ./gr_common/core/usb_core.c 
+SRCFILES += ./gr_common/core/usb_hal.c 
+SRCFILES += ./gr_common/core/utilities.cpp 
+SRCFILES += ./gr_common/core/WInterrupts.c 
+SRCFILES += ./gr_common/core/wiring.c 
+SRCFILES += ./gr_common/core/wiring_analog.c 
+SRCFILES += ./gr_common/core/wiring_digital.c 
+SRCFILES += ./gr_common/core/wiring_pulse.c 
+SRCFILES += ./gr_common/core/wiring_shift.c 
+SRCFILES += ./gr_common/core/WMath.cpp 
+SRCFILES += ./gr_common/core/WString.cpp 
+SRCFILES += ./gr_common/core/avr/avrlib.c 
+SRCFILES += ./gr_common/lib/DSP/DSP.cpp 
+SRCFILES += ./gr_common/lib/EEPROM/EEPROM.cpp 
+SRCFILES += ./gr_common/lib/EEPROM/utility/r_flash_api_rx600.c 
+SRCFILES += ./gr_common/lib/Firmata/Firmata.cpp 
+SRCFILES += ./gr_common/lib/LiquidCrystal/LiquidCrystal.cpp 
+SRCFILES += ./gr_common/lib/MsTimer2/MsTimer2.cpp 
+SRCFILES += ./gr_common/lib/RTC/RTC.cpp 
+SRCFILES += ./gr_common/lib/RTC/utility/RX63_RTC.cpp 
+SRCFILES += ./gr_common/lib/SD/File.cpp 
+SRCFILES += ./gr_common/lib/SD/SD.cpp 
+SRCFILES += ./gr_common/lib/SD/utility/Sd2Card.cpp 
+SRCFILES += ./gr_common/lib/SD/utility/SdFile.cpp 
+SRCFILES += ./gr_common/lib/SD/utility/SdVolume.cpp 
+SRCFILES += ./gr_common/lib/Servo/Servo.cpp 
+SRCFILES += ./gr_common/lib/SoftwareSerial/SoftwareSerial.cpp 
+SRCFILES += ./gr_common/lib/SPI/SPI.cpp 
+SRCFILES += ./gr_common/lib/Stepper/Stepper.cpp 
+SRCFILES += ./gr_common/lib/Wire/Wire.cpp 
+SRCFILES += ./gr_common/lib/Wire/utility/I2cMaster.cpp 
+SRCFILES += ./gr_common/lib/Wire/utility/twi_rx.c 
+SRCFILES += ./gr_common/rx63n/exception_handler.cpp 
+SRCFILES += ./gr_common/rx63n/hardware_setup.cpp 
+SRCFILES += ./gr_common/rx63n/interrupt_handlers.c 
+SRCFILES += ./gr_common/rx63n/reboot.c 
+SRCFILES += ./gr_common/rx63n/reset_program.asm 
+SRCFILES += ./gr_common/rx63n/util.c 
+SRCFILES += ./gr_common/rx63n/vector_table.c
+SRCFILES += ./wrbb_eepfile/eepfile.cpp 
+SRCFILES += ./wrbb_eepfile/eeploader.cpp
+SRCFILES += ./wrbb_mruby/sExec.cpp
+SRCFILES += ./wrbb_mruby/sFont.cpp 
+SRCFILES += ./wrbb_mruby/sI2c.cpp 
+SRCFILES += ./wrbb_mruby/sKernel.cpp  
+SRCFILES += ./wrbb_mruby/sLcdSpi.cpp 
+SRCFILES += ./wrbb_mruby/sMem.cpp 
+SRCFILES += ./wrbb_mruby/sRtc.cpp 
+SRCFILES += ./wrbb_mruby/sSdCard.cpp 
+SRCFILES += ./wrbb_mruby/sSerial.cpp 
+SRCFILES += ./wrbb_mruby/sServo.cpp 
+SRCFILES += ./wrbb_mruby/sSpi.cpp 
+SRCFILES += ./wrbb_mruby/sSys.cpp
+SRCFILES += ./wrbb_mruby/sJpeg.cpp
+SRCFILES += ./wrbb_mruby/picojpeg.c
+ifdef MR_TWITTER 
+SRCFILES += ./wrbb_mruby/sTwitter.cpp 
+endif
+SRCFILES += ./wrbb_mruby/sWiFi.cpp 
+ifdef MR_MP3
+SRCFILES += ./wrbb_mruby/sMp3.cpp 
+endif
+SRCFILES += ./wrbb_mruby/sGlobal.cpp
+ifdef MR_MP3
+SRCFILES += ./WavMp3p/WavMp3p.cpp
+SRCFILES += ./WavMp3p/libmad-0.15.1b/bit.c 
+SRCFILES += ./WavMp3p/libmad-0.15.1b/decoder.c 
+SRCFILES += ./WavMp3p/libmad-0.15.1b/fixed.c 
+SRCFILES += ./WavMp3p/libmad-0.15.1b/frame.c 
+SRCFILES += ./WavMp3p/libmad-0.15.1b/huffman.c 
+SRCFILES += ./WavMp3p/libmad-0.15.1b/layer12.c 
+SRCFILES += ./WavMp3p/libmad-0.15.1b/layer3.c 
+SRCFILES += ./WavMp3p/libmad-0.15.1b/minimad.c 
+SRCFILES += ./WavMp3p/libmad-0.15.1b/stream.c 
+SRCFILES += ./WavMp3p/libmad-0.15.1b/synth.c 
+SRCFILES += ./WavMp3p/libmad-0.15.1b/timer.c 
+SRCFILES += ./WavMp3p/libmad-0.15.1b/version.c 
+SRCFILES += ./WavMp3p/utility/wavmp3p_audio.c 
+SRCFILES += ./WavMp3p/utility/wavmp3p_ctrl.c 
+SRCFILES += ./WavMp3p/utility/wavmp3p_dma.c 
+SRCFILES += ./WavMp3p/utility/wavmp3p_gpio.c 
+SRCFILES += ./WavMp3p/utility/wavmp3p_icu.c 
+SRCFILES += ./WavMp3p/utility/wavmp3p_init.c 
+SRCFILES += ./WavMp3p/utility/wavmp3p_play.cpp 
+SRCFILES += ./WavMp3p/utility/wavmp3p_play_mp3.c 
+SRCFILES += ./WavMp3p/utility/wavmp3p_play_wav.c 
+SRCFILES += ./WavMp3p/utility/wavmp3p_pwm.c
+endif
+
+# OBJFILES
+
+OBJFILES = ./gr_sketch.o 
+OBJFILES += ./gr_common/core/HardwareSerial.o 
+OBJFILES += ./gr_common/core/main.o 
+OBJFILES += ./gr_common/core/new.o 
+OBJFILES += ./gr_common/core/Print.o 
+OBJFILES += ./gr_common/core/Stream.o 
+OBJFILES += ./gr_common/core/Tone.o 
+OBJFILES += ./gr_common/core/utilities.o 
+OBJFILES += ./gr_common/core/WMath.o 
+OBJFILES += ./gr_common/core/WString.o 
+OBJFILES += ./gr_common/lib/DSP/DSP.o 
+OBJFILES += ./gr_common/lib/EEPROM/EEPROM.o 
+OBJFILES += ./gr_common/lib/Firmata/Firmata.o 
+OBJFILES += ./gr_common/lib/LiquidCrystal/LiquidCrystal.o 
+OBJFILES += ./gr_common/lib/MsTimer2/MsTimer2.o 
+OBJFILES += ./gr_common/lib/RTC/RTC.o 
+OBJFILES += ./gr_common/lib/RTC/utility/RX63_RTC.o 
+OBJFILES += ./gr_common/lib/SD/File.o 
+OBJFILES += ./gr_common/lib/SD/SD.o 
+OBJFILES += ./gr_common/lib/SD/utility/Sd2Card.o 
+OBJFILES += ./gr_common/lib/SD/utility/SdFile.o 
+OBJFILES += ./gr_common/lib/SD/utility/SdVolume.o 
+OBJFILES += ./gr_common/lib/Servo/Servo.o 
+OBJFILES += ./gr_common/lib/SoftwareSerial/SoftwareSerial.o 
+OBJFILES += ./gr_common/lib/SPI/SPI.o 
+OBJFILES += ./gr_common/lib/Stepper/Stepper.o 
+OBJFILES += ./gr_common/lib/Wire/Wire.o 
+OBJFILES += ./gr_common/lib/Wire/utility/I2cMaster.o 
+OBJFILES += ./gr_common/rx63n/exception_handler.o 
+OBJFILES += ./gr_common/rx63n/hardware_setup.o
+OBJFILES += ./wrbb_eepfile/eepfile.o
+OBJFILES += ./wrbb_eepfile/eeploader.o
+OBJFILES += ./wrbb_mruby/sExec.o
+OBJFILES += ./wrbb_mruby/sFont.o
+OBJFILES += ./wrbb_mruby/sGlobal.o
+OBJFILES += ./wrbb_mruby/sI2c.o
+OBJFILES += ./wrbb_mruby/sKernel.o
+OBJFILES += ./wrbb_mruby/sLcdSpi.o
+OBJFILES += ./wrbb_mruby/sMem.o
+OBJFILES += ./wrbb_mruby/sRtc.o
+OBJFILES += ./wrbb_mruby/sSdCard.o
+OBJFILES += ./wrbb_mruby/sSerial.o
+OBJFILES += ./wrbb_mruby/sServo.o
+OBJFILES += ./wrbb_mruby/sSpi.o
+OBJFILES += ./wrbb_mruby/sSys.o
+OBJFILES += ./wrbb_mruby/sJpeg.o
+OBJFILES += ./wrbb_mruby/picojpeg.o
+ifdef MR_TWITTER 
+OBJFILES += ./wrbb_mruby/sTwitter.o
+endif
+OBJFILES += ./wrbb_mruby/sWiFi.o
+ifdef MR_MP3
+OBJFILES += ./wrbb_mruby/sMp3.o
+OBJFILES += ./WavMp3p/WavMp3p.o
+OBJFILES += ./WavMp3p/utility/wavmp3p_play.o
+endif
+OBJFILES += ./wrbb_mruby/sDCMotor.o
+OBJFILES += ./gr_common/core/usbdescriptors.o
+OBJFILES += ./gr_common/core/usb_cdc.o
+OBJFILES += ./gr_common/core/usb_core.o
+OBJFILES += ./gr_common/core/usb_hal.o
+OBJFILES += ./gr_common/core/WInterrupts.o
+OBJFILES += ./gr_common/core/wiring.o
+OBJFILES += ./gr_common/core/wiring_analog.o
+OBJFILES += ./gr_common/core/wiring_digital.o
+OBJFILES += ./gr_common/core/wiring_pulse.o
+OBJFILES += ./gr_common/core/wiring_shift.o
+OBJFILES += ./gr_common/core/avr/avrlib.o
+OBJFILES += ./gr_common/lib/EEPROM/utility/r_flash_api_rx600.o
+OBJFILES += ./gr_common/lib/Wire/utility/twi_rx.o
+OBJFILES += ./gr_common/rx63n/interrupt_handlers.o
+OBJFILES += ./gr_common/rx63n/reboot.o
+OBJFILES += ./gr_common/rx63n/util.o
+OBJFILES += ./gr_common/rx63n/vector_table.o
+ifdef MR_MP3
+OBJFILES += ./WavMp3p/libmad-0.15.1b/bit.o
+OBJFILES += ./WavMp3p/libmad-0.15.1b/decoder.o
+OBJFILES += ./WavMp3p/libmad-0.15.1b/fixed.o
+OBJFILES += ./WavMp3p/libmad-0.15.1b/frame.o
+OBJFILES += ./WavMp3p/libmad-0.15.1b/huffman.o
+OBJFILES += ./WavMp3p/libmad-0.15.1b/layer12.o
+OBJFILES += ./WavMp3p/libmad-0.15.1b/layer3.o
+OBJFILES += ./WavMp3p/libmad-0.15.1b/minimad.o
+OBJFILES += ./WavMp3p/libmad-0.15.1b/stream.o
+OBJFILES += ./WavMp3p/libmad-0.15.1b/synth.o
+OBJFILES += ./WavMp3p/libmad-0.15.1b/timer.o
+OBJFILES += ./WavMp3p/libmad-0.15.1b/version.o
+OBJFILES += ./WavMp3p/utility/wavmp3p_audio.o
+OBJFILES += ./WavMp3p/utility/wavmp3p_ctrl.o
+OBJFILES += ./WavMp3p/utility/wavmp3p_dma.o
+OBJFILES += ./WavMp3p/utility/wavmp3p_gpio.o
+OBJFILES += ./WavMp3p/utility/wavmp3p_icu.o
+OBJFILES += ./WavMp3p/utility/wavmp3p_init.o
+OBJFILES += ./WavMp3p/utility/wavmp3p_play_mp3.o
+OBJFILES += ./WavMp3p/utility/wavmp3p_play_wav.o
+OBJFILES += ./WavMp3p/utility/wavmp3p_pwm.o
+endif
+OBJFILES += ./gr_common/rx63n/reset_program.o
+
+LIBFILES = ./gr_common/lib/DSP/utility/libGNU_RX_DSP_Little.a
+LIBFILES += ./wrbb_mruby/libmruby.a
+
+CCINC = -I./gr_build
+CCINC += -I./gr_common 
+CCINC += -I./gr_common/core 
+CCINC += -I./gr_common/core/avr 
+CCINC += -I./gr_common/lib 
+CCINC += -I./gr_common/lib/DSP 
+CCINC += -I./gr_common/lib/DSP/utility 
+CCINC += -I./gr_common/lib/EEPROM 
+CCINC += -I./gr_common/lib/EEPROM/utility 
+CCINC += -I./gr_common/lib/Firmata 
+CCINC += -I./gr_common/lib/LiquidCrystal 
+CCINC += -I./gr_common/lib/MsTimer2 
+CCINC += -I./gr_common/lib/RTC 
+CCINC += -I./gr_common/lib/RTC/utility 
+CCINC += -I./gr_common/lib/SD 
+CCINC += -I./gr_common/lib/SD/utility 
+CCINC += -I./gr_common/lib/Servo 
+CCINC += -I./gr_common/lib/SoftwareSerial 
+CCINC += -I./gr_common/lib/SPI 
+CCINC += -I./gr_common/lib/Stepper 
+CCINC += -I./gr_common/lib/Wire 
+CCINC += -I./gr_common/lib/Wire/utility 
+CCINC += -I./gr_common/rx63n 
+CCINC += -I./USB_Driver
+CCINC += -I./wrbb_eepfile 
+CCINC += -I./wrbb_mruby 
+CCINC += -I./wrbb_mruby/include 
+CCINC += -I./wrbb_mruby/include/mruby
+ifdef MR_MP3
+CCINC += -I./WavMp3p 
+CCINC += -I./WavMp3p/libmad-0.15.1b 
+CCINC += -I./WavMp3p/libmad-0.15.1b/msvc++ 
+CCINC += -I./WavMp3p/utility
+endif
+
+HEADERFILES = ./wrbb.h 
+HEADERFILES += ./gr_common/core/Arduino.h 
+HEADERFILES += ./gr_common/core/binary.h
+HEADERFILES += ./gr_common/core/HardwareSerial.h 
+HEADERFILES += ./gr_common/core/HardwareSerial_private.h
+HEADERFILES += ./gr_common/core/new.h 
+HEADERFILES += ./gr_common/core/pins_arduino.h 
+HEADERFILES += ./gr_common/core/Print.h 
+HEADERFILES += ./gr_common/core/Printable.h 
+HEADERFILES += ./gr_common/core/Stream.h 
+HEADERFILES += ./gr_common/core/Types.h 
+HEADERFILES += ./gr_common/core/usbdescriptors.h 
+HEADERFILES += ./gr_common/core/usb_cdc.h 
+HEADERFILES += ./gr_common/core/usb_common.h 
+HEADERFILES += ./gr_common/core/usb_core.h 
+HEADERFILES += ./gr_common/core/usb_hal.h 
+HEADERFILES += ./gr_common/core/utilities.h 
+HEADERFILES += ./gr_common/core/WCharacter.h 
+HEADERFILES += ./gr_common/core/wiring_private.h 
+HEADERFILES += ./gr_common/core/WString.h 
+HEADERFILES += ./gr_common/core/avr/avrlib.h 
+HEADERFILES += ./gr_common/core/avr/pgmspace.h 
+HEADERFILES += ./gr_common/lib/DSP/DSP.h 
+HEADERFILES += ./gr_common/lib/DSP/utility/r_dsp_complex.h 
+HEADERFILES += ./gr_common/lib/DSP/utility/r_dsp_filters.h 
+HEADERFILES += ./gr_common/lib/DSP/utility/r_dsp_matrix.h 
+HEADERFILES += ./gr_common/lib/DSP/utility/r_dsp_statistical.h 
+HEADERFILES += ./gr_common/lib/DSP/utility/r_dsp_transform.h 
+HEADERFILES += ./gr_common/lib/DSP/utility/r_dsp_typedefs.h 
+HEADERFILES += ./gr_common/lib/DSP/utility/r_dsp_types.h 
+HEADERFILES += ./gr_common/lib/EEPROM/EEPROM.h 
+HEADERFILES += ./gr_common/lib/EEPROM/utility/r_flash_api_rx600.h 
+HEADERFILES += ./gr_common/lib/Firmata/Boards.h 
+HEADERFILES += ./gr_common/lib/Firmata/Firmata.h 
+HEADERFILES += ./gr_common/lib/LiquidCrystal/LiquidCrystal.h 
+HEADERFILES += ./gr_common/lib/MsTimer2/MsTimer2.h 
+HEADERFILES += ./gr_common/lib/RTC/RTC.h 
+HEADERFILES += ./gr_common/lib/RTC/utility/RX63_RTC.h 
+HEADERFILES += ./gr_common/lib/SD/SD.h 
+HEADERFILES += ./gr_common/lib/SD/utility/FatStructs.h 
+HEADERFILES += ./gr_common/lib/SD/utility/Sd2Card.h 
+HEADERFILES += ./gr_common/lib/SD/utility/Sd2PinMap.h 
+HEADERFILES += ./gr_common/lib/SD/utility/SdFat.h 
+HEADERFILES += ./gr_common/lib/SD/utility/SdFatmainpage.h 
+HEADERFILES += ./gr_common/lib/SD/utility/SdFatUtil.h 
+HEADERFILES += ./gr_common/lib/SD/utility/SdInfo.h 
+HEADERFILES += ./gr_common/lib/Servo/Servo.h 
+HEADERFILES += ./gr_common/lib/SoftwareSerial/SoftwareSerial.h 
+HEADERFILES += ./gr_common/lib/SPI/SPI.h 
+HEADERFILES += ./gr_common/lib/Stepper/Stepper.h 
+HEADERFILES += ./gr_common/lib/Wire/Wire.h 
+HEADERFILES += ./gr_common/lib/Wire/utility/I2cMaster.h 
+HEADERFILES += ./gr_common/lib/Wire/utility/twi_rx.h 
+HEADERFILES += ./gr_common/rx63n/interrupt_handlers.h 
+HEADERFILES += ./gr_common/rx63n/iodefine.h 
+HEADERFILES += ./gr_common/rx63n/iodefine_gcc63n.h 
+HEADERFILES += ./gr_common/rx63n/reboot.h 
+HEADERFILES += ./gr_common/rx63n/rx63n_stdio.h 
+HEADERFILES += ./gr_common/rx63n/specific_instructions.h 
+HEADERFILES += ./gr_common/rx63n/typedefine.h 
+HEADERFILES += ./gr_common/rx63n/user_interrupt.h 
+HEADERFILES += ./gr_common/rx63n/util.h
+HEADERFILES += ./wrbb_eepfile/eepfile.h 
+HEADERFILES += ./wrbb_eepfile/eeploader.h 
+HEADERFILES += ./wrbb_mruby/sExec.h 
+HEADERFILES += ./wrbb_mruby/sFont.h 
+HEADERFILES += ./wrbb_mruby/sI2c.h 
+HEADERFILES += ./wrbb_mruby/sKernel.h 
+HEADERFILES += ./wrbb_mruby/sMem.h 
+HEADERFILES += ./wrbb_mruby/sRtc.h 
+HEADERFILES += ./wrbb_mruby/sSdCard.h 
+HEADERFILES += ./wrbb_mruby/sSerial.h 
+HEADERFILES += ./wrbb_mruby/sServo.h 
+HEADERFILES += ./wrbb_mruby/sSpi.h 
+HEADERFILES += ./wrbb_mruby/sSys.h
+#HEADERFILES += ./wrbb_mruby/sJpeg.h
+HEADERFILES += ./wrbb_mruby/picojpeg.h
+ifdef MR_TWITTER 
+HEADERFILES += ./wrbb_mruby/sTwitter.h 
+endif
+HEADERFILES += ./wrbb_mruby/sWiFi.h 
+ifdef MR_MP3
+HEADERFILES += ./wrbb_mruby/sMp3.h 
+endif
+HEADERFILES += ./wrbb_mruby/sGlobal.h
+HEADERFILES += ./wrbb_mruby/include/mrbconf.h 
+HEADERFILES += ./wrbb_mruby/include/mruby.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/array.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/boxing_nan.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/boxing_no.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/boxing_word.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/class.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/common.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/compile.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/data.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/debug.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/dump.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/error.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/gc.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/hash.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/irep.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/khash.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/numeric.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/object.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/opcode.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/proc.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/range.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/re.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/string.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/throw.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/value.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/variable.h 
+HEADERFILES += ./wrbb_mruby/include/mruby/version.h
+ifdef MR_MP3
+HEADERFILES += ./WavMp3p/WavMp3p.h 
+HEADERFILES += ./WavMp3p/libmad-0.15.1b/bit.h 
+HEADERFILES += ./WavMp3p/libmad-0.15.1b/config.h.in 
+HEADERFILES += ./WavMp3p/libmad-0.15.1b/decoder.h 
+HEADERFILES += ./WavMp3p/libmad-0.15.1b/fixed.h 
+HEADERFILES += ./WavMp3p/libmad-0.15.1b/frame.h 
+HEADERFILES += ./WavMp3p/libmad-0.15.1b/global.h 
+HEADERFILES += ./WavMp3p/libmad-0.15.1b/huffman.h 
+HEADERFILES += ./WavMp3p/libmad-0.15.1b/layer12.h 
+HEADERFILES += ./WavMp3p/libmad-0.15.1b/layer3.h 
+HEADERFILES += ./WavMp3p/libmad-0.15.1b/mad.h 
+HEADERFILES += ./WavMp3p/libmad-0.15.1b/stream.h 
+HEADERFILES += ./WavMp3p/libmad-0.15.1b/synth.h 
+HEADERFILES += ./WavMp3p/libmad-0.15.1b/timer.h 
+HEADERFILES += ./WavMp3p/libmad-0.15.1b/version.h 
+HEADERFILES += ./WavMp3p/libmad-0.15.1b/msvc++/config.h 
+HEADERFILES += ./WavMp3p/libmad-0.15.1b/msvc++/mad.h 
+HEADERFILES += ./WavMp3p/utility/wavmp3p_audio.h 
+HEADERFILES += ./WavMp3p/utility/wavmp3p_ctrl.h 
+HEADERFILES += ./WavMp3p/utility/wavmp3p_dma.h 
+HEADERFILES += ./WavMp3p/utility/wavmp3p_gpio.h 
+HEADERFILES += ./WavMp3p/utility/wavmp3p_icu.h 
+HEADERFILES += ./WavMp3p/utility/wavmp3p_init.h 
+HEADERFILES += ./WavMp3p/utility/wavmp3p_play.h 
+HEADERFILES += ./WavMp3p/utility/wavmp3p_play_mp3.h 
+HEADERFILES += ./WavMp3p/utility/wavmp3p_play_wav.h 
+HEADERFILES += ./WavMp3p/utility/wavmp3p_pwm.h
+endif
 
 ifeq ($(OS),Windows_NT)
 	# GNU_PATH := c:/Renesas/GNURXv14.03-ELF/rx-elf/rx-elf/
@@ -47,9 +391,11 @@ else
 endif
 GCC_VERSION := 4.8-GNURX_v14.03
 CCINC := $(filter-out -I./wrbb_mruby/include/mruby, $(CCINC)) #string.hの重複を避けるため
-CFLAGS := -Wall -ffunction-sections -fno-function-cse -fsigned-char -fdata-sections -I. -I"$(GNU_PATH)rx-elf\include" -I"$(GNU_PATH)lib\gcc\rx-elf\$(GCC_VERSION)\include" -mno-balign -DGRCITRUS -DARDUINO=100 -DCPPAPP -D__RX_LITTLE_ENDIAN__=1 -O2 -g2 -g -flto -mlittle-endian-data -mcpu=rx600 -m64bit-doubles \
+CFLAGS := -Wall -ffunction-sections -fno-function-cse -fsigned-char -fdata-sections -I. -I"$(GNU_PATH)rx-elf\include" -I"$(GNU_PATH)lib\gcc\rx-elf\$(GCC_VERSION)\include" -mno-balign -DARDUINO=100 -DCPPAPP -D__RX_LITTLE_ENDIAN__=1 -O2 -g2 -g -flto -mlittle-endian-data -mcpu=rx600 -m64bit-doubles \
           -DMRB_USE_FLOAT -DMRB_FUNCALL_ARGC_MAX=6 -DMRB_HEAP_PAGE_SIZE=24 -DMRB_USE_IV_SEGLIST -DMRB_IVHASH_INIT_SIZE=3 -DKHASH_DEFAULT_SIZE=2 -DPOOL_PAGE_SIZE=256 -DMRB_BYTECODE_DECODE_OPTION # mruby/build_config.rbを参照のこと
-AFLAGS := -Wall -ffunction-sections -fno-function-cse -fsigned-char -fdata-sections -I. -I"$(GNU_PATH)rx-elf\include" -I"$(GNU_PATH)lib\gcc\rx-elf\$(GCC_VERSION)\include" -mno-balign -DGRCITRUS -DARDUINO=100 -DCPPAPP -D__RX_LITTLE_ENDIAN__=1 -O2 -g2 -g -flto -mlittle-endian-data -mcpu=rx600 -m64bit-doubles
+CFLAGS += -DGRCITRUS
+AFLAGS := -Wall -ffunction-sections -fno-function-cse -fsigned-char -fdata-sections -I. -I"$(GNU_PATH)rx-elf\include" -I"$(GNU_PATH)lib\gcc\rx-elf\$(GCC_VERSION)\include" -mno-balign -DARDUINO=100 -DCPPAPP -D__RX_LITTLE_ENDIAN__=1 -O2 -g2 -g -flto -mlittle-endian-data -mcpu=rx600 -m64bit-doubles
+AFLAGS += -DGRCITRUS
 SFLAGS :=--gdwarf2
 CC  = $(GNU_PATH)bin/rx-elf-gcc
 CPP = $(GNU_PATH)bin/rx-elf-gcc
@@ -63,10 +409,10 @@ OBJS = $(OBJFILES) $(LIBFILES)
 AOBJS = $(filter-out ./gr_sketch.o, $(OBJFILES))
 
 #TARGET = sakura_sketch_128K
-#LFLAGS = -Map ./gr_build/$(TARGET).map -e_PowerON_Reset -T"./gr_common/linker_arduino_BDDFP.gsi" -no-keep-memory -S -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" --no-flag-mismatch-warnings --start-group -lstdc++ -lnosys -lsim -lm -lc -lgcc --end-group
+#LFLAGS = -Map ./gr_build/$(TARGET).map -e_PowerON_Reset -T"./gr_common/linker_arduino_BDDFP.gsi" -no-keep-memory -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" --no-flag-mismatch-warnings --start-group -lstdc++ -lnosys -lsim -lm -lc -lgcc --end-group
 
 TARGET = citrus_sketch
-LFLAGS = -Map ./gr_build/$(TARGET).map -e_PowerON_Reset -T"./gr_common/linker_arduino_FDDFP.gsi" -no-keep-memory -S -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" --no-flag-mismatch-warnings --start-group -lstdc++ -lnosys -lsim -lm -lc -lgcc --end-group
+LFLAGS = -Map ./gr_build/$(TARGET).map -e_PowerON_Reset -T"./gr_common/linker_arduino_FDDFP.gsi" -no-keep-memory -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" --no-flag-mismatch-warnings --start-group -lstdc++ -lnosys -lsim -lm -lc -lgcc --end-group
 
 #TARGET = sakura2_sketch_256K
 #LFLAGS = -Map ./gr_build/$(TARGET).map -e_PowerON_Reset -T"./gr_common/linker_arduino_YDDFP.gsi" -no-keep-memory -S -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" --no-flag-mismatch-warnings --start-group -lstdc++ -lnosys -lsim -lm -lc -lgcc --end-group

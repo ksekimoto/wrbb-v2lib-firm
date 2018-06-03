@@ -6,6 +6,10 @@ MEMORY
 
 SECTIONS
 {
+	.fvectors 0xFFFFFF80 : AT (0xFFFFFF80)
+	{
+		KEEP(*(.fvectors))
+	} > ROM
 	.text 0xFFE00000 : AT (0xFFE00000)
 	{
 		*(.text)
@@ -52,10 +56,6 @@ SECTIONS
 		*(C)
 		_erodata = .;
 	} > ROM
-	.fvectors : 
-	{
-		KEEP(*(.fvectors))
-	} > ROM
 	.eh_frame_hdr : 
 	{
 		*(.eh_frame_hdr)
@@ -84,11 +84,11 @@ SECTIONS
 		. = ALIGN(2);
 		_mdata = .;
 	} > ROM
-	.istack 0x40000 : AT (0x40000)
+	.istack 0x3FFFC : AT (0x3FFFC)
 	{
 		_istack = .;
-	}
-	.ustack 0x3FF00 : AT (0x3FF00)
+	} > RAM
+	.ustack 0x3FEFC : AT (0x3FEFC)
 	{
 		_ustack = .;
 	} > RAM
@@ -102,20 +102,20 @@ SECTIONS
 		*(D_2)
 		_edata = .;
 	} > RAM
-	._RX_DESC : 
-	{
-		. = ALIGN(32);
-		*(._RX_DESC)
-	} > RAM
-	._TX_DESC : 
-	{
-		. = ALIGN(32);
-		*(._TX_DESC)
-	} > RAM
-	._ETHERNET_BUFFERS : 
-	{
-		*(._ETHERNET_BUFFERS)
-	} > RAM
+#	._RX_DESC : 
+#	{
+#		. = ALIGN(32);
+#		*(._RX_DESC)
+#	} > RAM
+#	._TX_DESC : 
+#	{
+#		. = ALIGN(32);
+#		*(._TX_DESC)
+#	} > RAM
+#	._ETHERNET_BUFFERS : 
+#	{
+#		*(._ETHERNET_BUFFERS)
+#	} > RAM
 	.bss : 
 	{
 		_bss = .;

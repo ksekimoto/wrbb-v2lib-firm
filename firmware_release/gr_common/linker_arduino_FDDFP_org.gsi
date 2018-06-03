@@ -1,12 +1,12 @@
 MEMORY
 {
-	RAM : ORIGIN = 0x0, LENGTH = 131072
-	ROM : ORIGIN = 0xFFF00000, LENGTH = 1048576
+	RAM : ORIGIN = 0x0, LENGTH = 262144
+	ROM : ORIGIN = 0xFFE00000, LENGTH = 2097152
 }
 
 SECTIONS
 {
-	.text 0xFFF00000 : AT (0xFFF00000)
+	.text 0xFFE00000 : AT (0xFFE00000)
 	{
 		*(.text)
 		*(.text.*)
@@ -52,7 +52,7 @@ SECTIONS
 		*(C)
 		_erodata = .;
 	} > ROM
-	.fvectors : AT (0xFFFFFF80)
+	.fvectors : 
 	{
 		KEEP(*(.fvectors))
 	} > ROM
@@ -84,11 +84,11 @@ SECTIONS
 		. = ALIGN(2);
 		_mdata = .;
 	} > ROM
-	.istack 0x20000 : AT (0x20000)
+	.istack 0x40000 : AT (0x40000)
 	{
 		_istack = .;
 	}
-	.ustack 0x1FF00 : AT (0x1FF00)
+	.ustack 0x3FF00 : AT (0x3FF00)
 	{
 		_ustack = .;
 	} > RAM

@@ -24,6 +24,7 @@
 #if BOARD == BOARD_GR || FIRMWARE == SDBT || FIRMWARE == SDWF || BOARD == BOARD_P05 || BOARD == BOARD_P06
 	#include "sSdCard.h"
 #endif
+#include <time.h>
 
 extern HardwareSerial *RbSerial[];		//0:Serial(USB), 1:Serial1, 2:Serial3, 3:Serial2, 4:Serial6 5:Serial7
 
@@ -38,8 +39,12 @@ int WiFiRecvOutlNum = -1;	//ESP8266からの受信を出力するシリアル番
 //#define	DEBUG		// Define if you want to debug
 #ifdef DEBUG
 #  define DEBUG_PRINT(m,v)    { Serial.print("** "); Serial.print((m)); Serial.print(":"); Serial.println((v)); }
+#  define DEBUG_PRINT1(s)      { Serial.print((s)); }
+#  define DEBUG_PRINTLN1(s)    { Serial.println((s)); }
 #else
 #  define DEBUG_PRINT(m,v)    // do nothing
+#  define DEBUG_PRINT1(s)      // do nothing
+#  define DEBUG_PRINTLN1(s)    // do nothing
 #endif
 
 
@@ -70,7 +75,7 @@ int n = 0;
 			return 0;
 		}
 
-		while(len = RbSerial[WIFI_SERIAL]->available())
+		while((len = RbSerial[WIFI_SERIAL]->available()) != 0)
 		{
 			//DEBUG_PRINT("len=",len);
 			//DEBUG_PRINT("n=",n);
@@ -105,6 +110,7 @@ int n = 0;
 
 						// OK 0d0a || ERROR 0d0a
 						WiFiData[n] = 0;
+						DEBUG_PRINTLN1((const char*)WiFiData);
 						return 1;
 						//n = 256;
 					}
@@ -649,25 +655,13 @@ File fp, fd;
 //		2: SDカードが使えない
 //		... 各種エラー
 //**************************************************
-mrb_value mrb_wifi_getSD(mrb_state *mrb, mrb_value self)
+int wifi_getSD(char *strURL, char *strFname, int n, char **head, int ssl)
 {
-mrb_value vFname, vURL, vHeaders;
 const char *tmpFilename = "wifitmp.tmp";
 const char *hedFilename = "hedrfile.tmp";
-char	*strFname, *strURL;
 int len = 0;
 File fp, fd;
 int sla, koron;
-
-	//SDカードが利用可能か確かめます
-	if(!sdcard_Init(mrb)){
-		return mrb_fixnum_value( 2 );
-	}
-
-	int n = mrb_get_args(mrb, "SS|A", &vFname, &vURL, &vHeaders);
-
-	strFname = RSTRING_PTR(vFname);
-	strURL = RSTRING_PTR(vURL);
 
 	//httpサーバに送信するデータを、strFname ファイルに生成します。
 
@@ -677,13 +671,19 @@ int sla, koron;
 	}
 	//ファイルオープン
 	if( !(fp = SD.open(hedFilename, FILE_WRITE)) ){
-		return mrb_fixnum_value( 3 );
+		return 3;
 	}
 
 	//1行目を生成
 	{
 		fp.write( (unsigned char*)"GET /", 5);
 
+		//httpsかチェック
+		if (ssl) {
+			DEBUG_PRINTLN1("AT+CIPSSLSIZE=4096");
+			RbSerial[WIFI_SERIAL]->println("AT+CIPSSLSIZE=4096");
+			getData(WIFI_WAIT_MSEC);
+		}
 		//URLからドメインを分割する
 		len = strlen(strURL);
 		sla = len;
@@ -721,18 +721,11 @@ int sla, koron;
 	}
 
 	//ヘッダ情報が追加されているとき
-	if(n >= 3){
-		n = RARRAY_LEN( vHeaders );
-		mrb_value hes;
-		for (int i=0; i<n; i++) {
-	
-			hes = mrb_ary_ref(mrb, vHeaders, i);
-			len = strlen(RSTRING_PTR(hes));
-			
-			//ヘッダの追記
-			fp.write(RSTRING_PTR(hes), len);
-			fp.write(0x0D);	fp.write(0x0A);
-		}
+	for (int i=0; i<n; i++) {
+		len = strlen(*head);
+		//ヘッダの追記
+		fp.write((const unsigned char*)*head++, len);
+		fp.write(0x0D);	fp.write(0x0A);
 	}
 
 	//改行のみの行を追加する
@@ -753,21 +746,30 @@ int sla, koron;
 	}
 	WiFiData[sla] = 0;
 
-	RbSerial[WIFI_SERIAL]->print("AT+CIPSTART=4,\"TCP\",\"");
+	if (ssl) {
+		RbSerial[WIFI_SERIAL]->print("AT+CIPSTART=4,\"SSL\",\"");
+	} else {
+		RbSerial[WIFI_SERIAL]->print("AT+CIPSTART=4,\"TCP\",\"");
+	}
 	RbSerial[WIFI_SERIAL]->print((const char*)WiFiData);
 	RbSerial[WIFI_SERIAL]->print("\",");
 	if( koron < sla){
 		RbSerial[WIFI_SERIAL]->println((const char*)&WiFiData[koron + 1]);
 	}
 	else{
-		RbSerial[WIFI_SERIAL]->println("80");
+		if (ssl) {
+			RbSerial[WIFI_SERIAL]->println("443");
+		} else {
+			RbSerial[WIFI_SERIAL]->println("80");
+		}
 	}
 
 	//OK 0d0a か ERROR 0d0aが来るまで WiFiData[]に読むか、指定されたシリアルポートに出力します
 	getData(WIFI_WAIT_MSEC);
 
 	if( !(WiFiData[strlen((const char*)WiFiData)-2] == 'K' || WiFiData[strlen((const char*)WiFiData)-3] == 'K')){
-		return mrb_fixnum_value( 0 );
+		DEBUG_PRINTLN1("WIFI ERR");
+		return 0;
 	}
 	//Serial.print("httpServer Connect: ");
 	//Serial.print((const char*)WiFiData);
@@ -776,7 +778,7 @@ int sla, koron;
 
 	//送信データサイズ取得
 	if( !(fp = SD.open(hedFilename, FILE_READ)) ){
-		return mrb_fixnum_value( 4 );
+		return 4;
 	}
 	//ファイルサイズ取得
 	int sByte = fp.size();
@@ -793,7 +795,8 @@ int sla, koron;
 	//OK 0d0a か ERROR 0d0aが来るまで WiFiData[]に読むか、指定されたシリアルポートに出力します
 	getData(WIFI_WAIT_MSEC);
 	if( !(WiFiData[strlen((const char*)WiFiData)-2] == 'K' || WiFiData[strlen((const char*)WiFiData)-3] == 'K')){
-		return mrb_fixnum_value( 0 );
+		DEBUG_PRINTLN1("WIFI ERR");
+		return 0;
 	}
 
 	//Serial.print("> Waiting: ");
@@ -802,7 +805,7 @@ int sla, koron;
 	//****** 送信データ受付モードになったので、http GETデータを送信する ******
 	{
 		if( !(fp = SD.open(hedFilename, FILE_READ)) ){
-			return mrb_fixnum_value( 5 );
+			return 5;
 		}
 		WiFiData[1] = 0;
 		for(int i=0; i<sByte; i++){
@@ -818,7 +821,8 @@ int sla, koron;
 		getData(WIFI_WAIT_MSEC);
 
 		if( !(WiFiData[strlen((const char*)WiFiData)-2] == 'K' || WiFiData[strlen((const char*)WiFiData)-3] == 'K')){
-			return mrb_fixnum_value( 0 );
+			DEBUG_PRINTLN1("WIFI ERR");
+			return 0;
 		}
 		//Serial.print("Send Finish: ");
 		//Serial.print((const char*)WiFiData);
@@ -827,7 +831,7 @@ int sla, koron;
 
 	//****** 受信開始 ******
 	if( !(fp = SD.open(tmpFilename, FILE_WRITE)) ){
-		return mrb_fixnum_value( 6 );
+		return 6;
 	}
 
 	unsigned long times;
@@ -847,7 +851,7 @@ int sla, koron;
 			break;
 		}
 
-		while(len = RbSerial[WIFI_SERIAL]->available())
+		while((len = RbSerial[WIFI_SERIAL]->available()) != 0)
 		{
 			//LEDを点灯する
 #if BOARD == BOARD_GR
@@ -885,10 +889,11 @@ int sla, koron;
 	//受信データに '\r\n+\r\n+IPD,4,****:'というデータがあるので削除します
 	int ret = CutGarbageData("\r\n+IPD,4,", tmpFilename, strFname);
 	if(ret != 1){
-		return mrb_fixnum_value( 7 );
+		return 7;
 	}
 
 	//****** AT+CIPCLOSE コマンド ******
+	DEBUG_PRINTLN1("AT+CIPCLOSE=4");
 	RbSerial[WIFI_SERIAL]->println("AT+CIPCLOSE=4");
 	getData(WIFI_WAIT_MSEC);
 	
@@ -903,7 +908,51 @@ int sla, koron;
 	digitalWrite(RB_LED, led);
 #endif
 
-	return mrb_fixnum_value( 1 );
+	return 1;
+}
+
+mrb_value mrb_wifi_getSD_sub(mrb_state *mrb, mrb_value self, int ssl)
+{
+mrb_value vFname, vURL, vHeaders;
+char	*strFname, *strURL;
+char	**head = (char **)NULL;
+int ret;
+
+	//SDカードが利用可能か確かめます
+	if(!sdcard_Init(mrb)){
+		return mrb_fixnum_value( 2 );
+	}
+
+	int n = mrb_get_args(mrb, "SS|A", &vFname, &vURL, &vHeaders);
+
+	strFname = RSTRING_PTR(vFname);
+	strURL = RSTRING_PTR(vURL);
+
+	//ヘッダ情報が追加されているとき
+	if(n >= 3){
+		n = RARRAY_LEN(vHeaders);
+		head = (char **)malloc(sizeof(char *)*n);
+		mrb_value hes;
+		for (int i=0; i<n; i++) {
+			hes = mrb_ary_ref(mrb, vHeaders, i);
+			head[i] = RSTRING_PTR(hes);
+		}
+	}
+
+	ret = wifi_getSD(strURL, strFname, n, head, ssl);
+	if (head)
+		free(head);
+	return mrb_fixnum_value(ret);
+}
+
+mrb_value mrb_wifi_getSD(mrb_state *mrb, mrb_value self)
+{
+	return mrb_wifi_getSD_sub(mrb, self, 0);
+}
+
+mrb_value mrb_wifi_getSD_ssl(mrb_state *mrb, mrb_value self)
+{
+	return mrb_wifi_getSD_sub(mrb, self, 1);
 }
 
 //**************************************************
@@ -917,7 +966,7 @@ int sla, koron;
 //		0: 失敗
 //		1: 成功
 //**************************************************
-mrb_value mrb_wifi_get(mrb_state *mrb, mrb_value self)
+mrb_value mrb_wifi_get_sub(mrb_state *mrb, mrb_value self, int ssl)
 {
 mrb_value vURL, vHeaders;
 char	*strURL;
@@ -930,6 +979,12 @@ char sData[1024];
 
 	strURL = RSTRING_PTR(vURL);
 
+	//httpsかチェック
+	if (ssl) {
+		DEBUG_PRINTLN1("AT+CIPSSLSIZE=4096");
+		RbSerial[WIFI_SERIAL]->println("AT+CIPSSLSIZE=4096");
+		getData(WIFI_WAIT_MSEC);
+	}
 	//URLからドメインを分割する
 	len = strlen(strURL);
 	sla = len;
@@ -957,20 +1012,29 @@ char sData[1024];
 	}
 	WiFiData[sla] = 0;
 
-	RbSerial[WIFI_SERIAL]->print("AT+CIPSTART=4,\"TCP\",\"");
+	if (ssl) {
+		RbSerial[WIFI_SERIAL]->print("AT+CIPSTART=4,\"SSL\",\"");
+	} else {
+		RbSerial[WIFI_SERIAL]->print("AT+CIPSTART=4,\"TCP\",\"");
+	}
 	RbSerial[WIFI_SERIAL]->print((const char*)WiFiData);
 	RbSerial[WIFI_SERIAL]->print("\",");
 	if( koron < sla){
 		RbSerial[WIFI_SERIAL]->println((const char*)&WiFiData[koron + 1]);
 	}
 	else{
-		RbSerial[WIFI_SERIAL]->println("80");
+		if (ssl) {
+			RbSerial[WIFI_SERIAL]->println("443");
+		} else {
+			RbSerial[WIFI_SERIAL]->println("80");
+		}
 	}
 
 	//OK 0d0a か ERROR 0d0aが来るまで WiFiData[]に読むか、指定されたシリアルポートに出力します
 	getData(WIFI_WAIT_MSEC);
 
 	if( !(WiFiData[strlen((const char*)WiFiData)-2] == 'K' || WiFiData[strlen((const char*)WiFiData)-3] == 'K')){
+		DEBUG_PRINTLN1("WIFI ERR");
 		return mrb_fixnum_value( 0 );
 	}
 
@@ -1030,6 +1094,7 @@ char sData[1024];
 	//OK 0d0a か ERROR 0d0aが来るまで WiFiData[]に読むか、指定されたシリアルポートに出力します
 	getData(WIFI_WAIT_MSEC);
 	if( !(WiFiData[strlen((const char*)WiFiData)-2] == 'K' || WiFiData[strlen((const char*)WiFiData)-3] == 'K')){
+		DEBUG_PRINTLN1("WIFI ERR");
 		return mrb_fixnum_value( 0 );
 	}
 
@@ -1041,6 +1106,7 @@ char sData[1024];
 		getData(WIFI_WAIT_MSEC);
 
 		if( !(WiFiData[strlen((const char*)WiFiData)-2] == 'K' || WiFiData[strlen((const char*)WiFiData)-3] == 'K')){
+			DEBUG_PRINTLN1("WIFI ERR");
 			return mrb_fixnum_value( 0 );
 		}
 	}
@@ -1057,7 +1123,7 @@ char sData[1024];
 			break;
 		}
 
-		while(len = RbSerial[WIFI_SERIAL]->available())
+		while((len = RbSerial[WIFI_SERIAL]->available()) != 0)
 		{
 			for(int i=0; i<len; i++){
 				RbSerial[WIFI_SERIAL]->read();
@@ -1075,43 +1141,63 @@ char sData[1024];
 	return mrb_fixnum_value( 1 );
 }
 
+mrb_value mrb_wifi_get(mrb_state *mrb, mrb_value self)
+{
+	return mrb_wifi_get_sub(mrb, self, 0);
+}
+
+mrb_value mrb_wifi_get_ssl(mrb_state *mrb, mrb_value self)
+{
+	return mrb_wifi_get_sub(mrb, self, 1);
+}
+
 //**************************************************
 // TCP/UDP接続を閉じる: WiFi.cClose
 //  WiFi.cClose(number)
 //  number: 接続番号(1～4)
 //**************************************************
-mrb_value mrb_wifi_cClose(mrb_state *mrb, mrb_value self)
+void wifi_cClose(int num)
 {
-int	num;
-
-	mrb_get_args(mrb, "i", &num);
-
 	RbSerial[WIFI_SERIAL]->print("AT+CIPCLOSE=");
 	RbSerial[WIFI_SERIAL]->println(num);
 
 	//OK 0d0a か ERROR 0d0aが来るまで WiFiData[]に読むか、指定されたシリアルポートに出力します
 	getData(WIFI_WAIT_MSEC);
 
+	return;
+}
+
+mrb_value mrb_wifi_cClose(mrb_state *mrb, mrb_value self)
+{
+int	num;
+
+	mrb_get_args(mrb, "i", &num);
+	wifi_cClose(num);
 	return mrb_str_new_cstr(mrb, (const char*)WiFiData);
 }
 
 //**************************************************
 // UDP接続を開始します: WiFi.udpOpen
 //  WiFi.udpOpen( number, IP_Address, SendPort, ReceivePort )
-//　number: 接続番号(1～4) 
+//　number: 接続番号(1～4)
 //	IP_Address: 通信相手アドレス
 //	SendPort: 送信ポート番号
 //	ReceivePort: 受信ポート番号
 //**************************************************
-mrb_value mrb_wifi_udpOpen(mrb_state *mrb, mrb_value self)
+static int chk_OK()
 {
-mrb_value vIpAdd;
-char	*strIpAdd;
-int	num, sport, rport;
+	char *p = (char *)WiFiData;
+	int n = strlen((const char *)WiFiData);
+	DEBUG_PRINTLN1((const char *)WiFiData);
+	if (n >= 4) {
+		if ((p[n-4] == 'O') && (p[n-3] == 'K'))
+			return 1;
+	}
+	return 0;
+}
 
-	mrb_get_args(mrb, "iSii", &num, &vIpAdd, &sport, &rport);
-	strIpAdd = RSTRING_PTR(vIpAdd);
-
+static int wifi_udpOpen(int num, char *strIpAdd, int sport, int rport)
+{
 	//****** AT+CIPSTARTコマンド ******
 	RbSerial[WIFI_SERIAL]->print("AT+CIPSTART=");
 	RbSerial[WIFI_SERIAL]->print(num);
@@ -1124,20 +1210,65 @@ int	num, sport, rport;
 
 	//OK 0d0a か ERROR 0d0aが来るまで WiFiData[]に読むか、指定されたシリアルポートに出力します
 	getData(WIFI_WAIT_MSEC);
+	return chk_OK();
+}
 
+mrb_value mrb_wifi_udpOpen(mrb_state *mrb, mrb_value self)
+{
+mrb_value vIpAdd;
+char	*strIpAdd;
+int	num, sport, rport;
+
+	mrb_get_args(mrb, "iSii", &num, &vIpAdd, &sport, &rport);
+	strIpAdd = RSTRING_PTR(vIpAdd);
+	wifi_udpOpen(num, strIpAdd, sport, rport);
 	return mrb_str_new_cstr(mrb, (const char*)WiFiData);
 }
 
 //**************************************************
 // 指定接続番号にデータを送信します: WiFi.send
 //  WiFi.send( number, Data[, length] )
-//　number: 接続番号(0～3) 
+//　number: 接続番号(0～3)
 //	Data: 送信するデータ
 //　length: 送信データサイズ
 //
 //  戻り値は
 //	  送信データサイズ
 //**************************************************
+static int wifi_send(int num, char *strdata, int len)
+{
+	//****** AT+CIPSTARTコマンド ******
+	RbSerial[WIFI_SERIAL]->print("AT+CIPSEND=");
+	RbSerial[WIFI_SERIAL]->print(num);
+	RbSerial[WIFI_SERIAL]->print(",");
+	RbSerial[WIFI_SERIAL]->println(len);
+
+	//OK 0d0a か ERROR 0d0aが来るまで WiFiData[]に読むか、指定されたシリアルポートに出力します
+	getData(WIFI_WAIT_MSEC);
+
+	if( !(WiFiData[strlen((const char*)WiFiData)-2] == 'K' || WiFiData[strlen((const char*)WiFiData)-3] == 'K')){
+		return 0;
+	}
+
+	//RbSerial[WIFI_SERIAL]->print((const char*)strdata);
+	for (int i = 0; i < len; i++) {
+		RbSerial[WIFI_SERIAL]->print((char)strdata[i]);
+	}
+
+	//OK 0d0a か ERROR 0d0aが来るまで WiFiData[]に読むか、指定されたシリアルポートに出力します
+	getData(WIFI_WAIT_MSEC);
+
+	if( !(WiFiData[strlen((const char*)WiFiData)-2] == 'K' || WiFiData[strlen((const char*)WiFiData)-3] == 'K')){
+
+		//タイムアウトと思われるので、強制的にデータサイズの不足分の0x0Dを送信する
+		for(int i=0; i<len-(int)strlen(strdata); i++){
+			RbSerial[WIFI_SERIAL]->print("\r");
+		}
+		return 0 ;
+	}
+	return len;
+}
+
 mrb_value mrb_wifi_send(mrb_state *mrb, mrb_value self)
 {
 mrb_value vdata;
@@ -1152,60 +1283,26 @@ int	num, len;
 		len = RSTRING_LEN(vdata);
 	}
 
-	//****** AT+CIPSTARTコマンド ******
-	RbSerial[WIFI_SERIAL]->print("AT+CIPSEND=");
-	RbSerial[WIFI_SERIAL]->print(num);
-	RbSerial[WIFI_SERIAL]->print(",");
-	RbSerial[WIFI_SERIAL]->println(len);
-
-	//OK 0d0a か ERROR 0d0aが来るまで WiFiData[]に読むか、指定されたシリアルポートに出力します
-	getData(WIFI_WAIT_MSEC);
-
-	if( !(WiFiData[strlen((const char*)WiFiData)-2] == 'K' || WiFiData[strlen((const char*)WiFiData)-3] == 'K')){
-		return mrb_fixnum_value( 0 );
-	}
-
-	RbSerial[WIFI_SERIAL]->print((const char*)strdata);
-
-	//OK 0d0a か ERROR 0d0aが来るまで WiFiData[]に読むか、指定されたシリアルポートに出力します
-	getData(WIFI_WAIT_MSEC);
-
-	if( !(WiFiData[strlen((const char*)WiFiData)-2] == 'K' || WiFiData[strlen((const char*)WiFiData)-3] == 'K')){
-
-		//タイムアウトと思われるので、強制的にデータサイズの不足分の0x0Dを送信する
-		for(int i=0; i<len-strlen(strdata); i++){
-			RbSerial[WIFI_SERIAL]->print("\r");
-		}
-		return mrb_fixnum_value( 0 );
-	}
-
+	len = wifi_send(num, strdata, len);
 	return mrb_fixnum_value( len );
 }
 
 //**************************************************
 // 指定接続番号からデータを受信します: WiFi.recv
 //  WiFi.recv( number )
-//　number: 接続番号(0～3) 
+//　number: 接続番号(0～3)
 //
 //  戻り値は
 //	  受信したデータの配列　ただし、256以下
 //**************************************************
-mrb_value mrb_wifi_recv(mrb_state *mrb, mrb_value self)
+static char *wifi_recv_buf[256];
+int wifi_recv(int num, char *recv_buf, int *recv_cnt)
 {
-int	num;
-unsigned char str[16];
-mrb_value arv[256];
-
-	mrb_get_args(mrb, "i", &num);
-
+	unsigned char str[16];
 	sprintf((char*)str, "\r\n+IPD,%d,", num);
-
-	//Serial.println((const char*)str);
-
-	if(RbSerial[WIFI_SERIAL]->available() == 0){
-		arv[0] = mrb_fixnum_value(-1);
-		return mrb_ary_new_from_values(mrb, 1, arv);
-	}
+	//if(RbSerial[WIFI_SERIAL]->available() == 0){
+	//	return -1;
+	//}
 
 	//****** 受信開始 ******
 	unsigned long times;
@@ -1277,7 +1374,7 @@ mrb_value arv[256];
 
 	//データを取りだします
 	times = millis();
-	cnt = 0;
+	*recv_cnt = 0;
 	while(true){
 		//wait_msec 待つ
 		if(millis() - times > wait_msec){
@@ -1286,10 +1383,10 @@ mrb_value arv[256];
 
 		if(RbSerial[WIFI_SERIAL]->available())
 		{
-			arv[cnt] = mrb_fixnum_value(RbSerial[WIFI_SERIAL]->read());
-			cnt++;
+			recv_buf[*recv_cnt] = (char)RbSerial[WIFI_SERIAL]->read();
+			(*recv_cnt)++;
 
-			if(cnt >= len){
+			if(*recv_cnt >= len){
 				break;
 			}
 			times = millis();
@@ -1297,6 +1394,25 @@ mrb_value arv[256];
 	}
 	//****** 受信終了 ******
 
+	return 1;
+}
+
+mrb_value mrb_wifi_recv(mrb_state *mrb, mrb_value self)
+{
+	int num;
+	mrb_value arv[256];
+	int ret, i, cnt;
+	mrb_get_args(mrb, "i", &num);
+
+	ret = wifi_recv(num, (char *)wifi_recv_buf, &cnt);
+	if (ret == -1) {
+		arv[0] = mrb_fixnum_value(-1);
+		return mrb_ary_new_from_values(mrb, 1, arv);
+	} else {
+		for (i = 0; i < cnt; i++) {
+			arv[i] = mrb_fixnum_value((int)wifi_recv_buf[i] & 0xff);
+		}
+	}
 	return mrb_ary_new_from_values(mrb, cnt, arv);
 }
 
@@ -1313,29 +1429,18 @@ mrb_value arv[256];
 //		2: SDカードが使えない
 //		... 各種エラー
 //**************************************************
-mrb_value mrb_wifi_postSD(mrb_state *mrb, mrb_value self)
+int wifi_postSD(char *strURL, char *strSFname, char *strDFname, int n, char **head, int ssl)
 {
-mrb_value vFname, vURL, vHeaders;
+const char *tmpFilename = "wifitmp.tmp";
 const char *headFilename = "headfile.tmp";
-char	*strFname, *strURL;
 int len = 0;
 File fp, fd;
 int sla, koron;
 int sBody, sHeader;
 
-	//SDカードが利用可能か確かめます
-	if (!sdcard_Init(mrb)){
-		return mrb_fixnum_value(2);
-	}
-
-	int n = mrb_get_args(mrb, "SAS", &vURL, &vHeaders, &vFname );
-
-	strFname = RSTRING_PTR(vFname);
-	strURL = RSTRING_PTR(vURL);
-
 	//送信ファイルサイズ取得
-	if (!(fp = SD.open(strFname, FILE_READ))){
-		return mrb_fixnum_value(3);
+	if (!(fp = SD.open(strSFname, FILE_READ))){
+		return 3;
 	}
 	//ファイルサイズ取得
 	sBody = fp.size();
@@ -1349,13 +1454,21 @@ int sBody, sHeader;
 	}
 	//ファイルオープン
 	if (!(fp = SD.open(headFilename, FILE_WRITE))){
-		return mrb_fixnum_value(4);
+		return 4;
 	}
 
+	RbSerial[WIFI_SERIAL]->println("AT+CIPMUX=1");
+	getData(WIFI_WAIT_MSEC);
 	//1行目を生成
 	{
 		fp.write((unsigned char*)"POST /", 6);
 
+		//httpsかチェック
+		if (ssl) {
+			DEBUG_PRINTLN1("AT+CIPSSLSIZE=4096");
+			RbSerial[WIFI_SERIAL]->println("AT+CIPSSLSIZE=4096");
+			getData(WIFI_WAIT_MSEC);
+		}
 		//URLからドメインを分割する
 		len = strlen(strURL);
 		sla = len;
@@ -1401,18 +1514,11 @@ int sBody, sHeader;
 	}
 
 	//ヘッダ情報が追加されているとき
-	{
-		n = RARRAY_LEN(vHeaders);
-		mrb_value hes;
-		for (int i = 0; i<n; i++) {
-
-			hes = mrb_ary_ref(mrb, vHeaders, i);
-			len = strlen(RSTRING_PTR(hes));
-
-			//ヘッダの追記
-			fp.write(RSTRING_PTR(hes), len);
-			fp.write(0x0D);	fp.write(0x0A);
-		}
+	for (int i = 0; i<n; i++) {
+		len = strlen(head[i]);
+		//ヘッダの追記
+		fp.write(head[i], len);
+		fp.write(0x0D);	fp.write(0x0A);
 	}
 
 	//改行のみの行を追加する
@@ -1433,21 +1539,30 @@ int sBody, sHeader;
 	}
 	WiFiData[sla] = 0;
 
-	RbSerial[WIFI_SERIAL]->print("AT+CIPSTART=4,\"TCP\",\"");
+	if (ssl) {
+		RbSerial[WIFI_SERIAL]->print("AT+CIPSTART=4,\"SSL\",\"");
+	} else {
+		RbSerial[WIFI_SERIAL]->print("AT+CIPSTART=4,\"TCP\",\"");
+	}
 	RbSerial[WIFI_SERIAL]->print((const char*)WiFiData);
 	RbSerial[WIFI_SERIAL]->print("\",");
 	if (koron < sla){
 		RbSerial[WIFI_SERIAL]->println((const char*)&WiFiData[koron + 1]);
 	}
 	else{
-		RbSerial[WIFI_SERIAL]->println("80");
+		if (ssl) {
+			RbSerial[WIFI_SERIAL]->println("443");
+		} else {
+			RbSerial[WIFI_SERIAL]->println("80");
+		}
 	}
 
 	//OK 0d0a か ERROR 0d0aが来るまで WiFiData[]に読むか、指定されたシリアルポートに出力します
 	getData(WIFI_WAIT_MSEC);
 
 	if (!(WiFiData[strlen((const char*)WiFiData) - 2] == 'K' || WiFiData[strlen((const char*)WiFiData) - 3] == 'K')){
-		return mrb_fixnum_value(0);
+		DEBUG_PRINTLN1("WIFI ERR");
+		return 0;
 	}
 	//Serial.print("httpServer Connect: ");
 	//Serial.print((const char*)WiFiData);
@@ -1456,7 +1571,7 @@ int sBody, sHeader;
 	
 	//送信ヘッダのサイズ取得
 	if (!(fp = SD.open(headFilename, FILE_READ))){
-		return mrb_fixnum_value(5);
+		return 5;
 	}
 	//ファイルサイズ取得
 	sHeader = fp.size();
@@ -1473,7 +1588,8 @@ int sBody, sHeader;
 	//OK 0d0a か ERROR 0d0aが来るまで WiFiData[]に読むか、指定されたシリアルポートに出力します
 	getData(WIFI_WAIT_MSEC);
 	if (!(WiFiData[strlen((const char*)WiFiData) - 2] == 'K' || WiFiData[strlen((const char*)WiFiData) - 3] == 'K')){
-		return mrb_fixnum_value(0);
+		DEBUG_PRINTLN1("WIFI ERR");
+		return 0;
 	}
 
 	//Serial.print("> Waiting: ");
@@ -1483,7 +1599,7 @@ int sBody, sHeader;
 	{
 		//先ずヘッダデータを送信する
 		if (!(fp = SD.open(headFilename, FILE_READ))){
-			return mrb_fixnum_value(6);
+			return 6;
 		}
 		WiFiData[1] = 0;
 		for (int i = 0; i<sHeader; i++){
@@ -1494,8 +1610,8 @@ int sBody, sHeader;
 		fp.close();
 
 		//先ずボディデータを送信する
-		if (!(fp = SD.open(strFname, FILE_READ))){
-			return mrb_fixnum_value(7);
+		if (!(fp = SD.open(strSFname, FILE_READ))){
+			return 7;
 		}
 		WiFiData[1] = 0;
 		for (int i = 0; i<sBody; i++){
@@ -1509,7 +1625,8 @@ int sBody, sHeader;
 		getData(WIFI_WAIT_MSEC);
 
 		if (!(WiFiData[strlen((const char*)WiFiData) - 2] == 'K' || WiFiData[strlen((const char*)WiFiData) - 3] == 'K')){
-			return mrb_fixnum_value(0);
+			DEBUG_PRINTLN1("WIFI ERR");
+			return 0;
 		}
 		//Serial.print("Send Finish: ");
 		//Serial.print((const char*)WiFiData);
@@ -1517,8 +1634,16 @@ int sBody, sHeader;
 	//****** 送信終了 ******
 
 	//****** 受信開始 ******
+	if (SD.exists(tmpFilename)){
+		SD.remove(tmpFilename);
+	}
+	if( !(fp = SD.open(tmpFilename, FILE_WRITE)) ){
+		return 6;
+	}
+
 	unsigned long times;
 	unsigned int wait_msec = WIFI_WAIT_MSEC;
+	unsigned char recv[2];
 	times = millis();
 
 	while(true){
@@ -1527,22 +1652,87 @@ int sBody, sHeader;
 			break;
 		}
 
-		while(len = RbSerial[WIFI_SERIAL]->available())
+		while((len = RbSerial[WIFI_SERIAL]->available()) != 0)
 		{
 			for(int i=0; i<len; i++){
-				RbSerial[WIFI_SERIAL]->read();
+				// RbSerial[WIFI_SERIAL]->read();
+				recv[0] = (unsigned char)RbSerial[WIFI_SERIAL]->read();
+				if (n >= 4) {
+					fp.write( (unsigned char*)recv, 1);
+				}
 			}
 			times = millis();
 			wait_msec = 100;	//データが届き始めたら、100ms待ちに変更する
 		}
 	}
+	fp.flush();
+	fp.close();
+
 	//****** 受信終了 ******
+	//Serial.println("Recv Finish");
+
+	if (strDFname) {
+		//受信データに '\r\n+\r\n+IPD,4,****:'というデータがあるので削除します
+		int ret = CutGarbageData("\r\n+IPD,4,", tmpFilename, (const char *)strDFname);
+		if(ret != 1){
+			return 7;
+		}
+	}
 
 	//****** AT+CIPCLOSE コマンド ******
 	RbSerial[WIFI_SERIAL]->println("AT+CIPCLOSE=4");
 	getData(WIFI_WAIT_MSEC);
 
-	return mrb_fixnum_value( 1 );
+	return 1;
+}
+
+mrb_value mrb_wifi_postSD_sub(mrb_state *mrb, mrb_value self, int ssl)
+{
+mrb_value vSFname, vURL, vHeaders, vDFname ;
+char	*strSFname, *strURL;
+char	*strDFname = (char *)NULL;
+char	**head;
+int ret;
+
+	//SDカードが利用可能か確かめます
+	if (!sdcard_Init(mrb)){
+		return mrb_fixnum_value(2);
+	}
+
+	int n = mrb_get_args(mrb, "SAS|S", &vURL, &vHeaders, &vSFname, &vDFname);
+
+	strSFname = RSTRING_PTR(vSFname);
+	strURL = RSTRING_PTR(vURL);
+	if (n >= 4) {
+		strDFname = RSTRING_PTR(vDFname);
+	}
+
+	//ヘッダ情報が追加されているとき
+	{
+		n = RARRAY_LEN(vHeaders);
+		head = (char **)malloc(sizeof(char *)*n);
+		if (!head)
+			return mrb_fixnum_value(8);
+		mrb_value hes;
+		for (int i = 0; i<n; i++) {
+			hes = mrb_ary_ref(mrb, vHeaders, i);
+			head[i] = RSTRING_PTR(hes);
+		}
+	}
+	ret = wifi_postSD(strURL, strSFname, strDFname, n, head, ssl);
+	if (head)
+		free(head);
+	return mrb_fixnum_value(ret);
+}
+
+mrb_value mrb_wifi_postSD(mrb_state *mrb, mrb_value self)
+{
+	return mrb_wifi_postSD_sub(mrb, self, 0);
+}
+
+mrb_value mrb_wifi_postSD_ssl(mrb_state *mrb, mrb_value self)
+{
+	return mrb_wifi_postSD_sub(mrb, self, 1);
 }
 
 //**************************************************
@@ -1557,24 +1747,26 @@ int sBody, sHeader;
 //		0: 失敗
 //		1: 成功
 //**************************************************
-mrb_value mrb_wifi_post(mrb_state *mrb, mrb_value self)
+int wifi_post(char *strURL, char *strData, char *strDFname, int n, char **head, int ssl)
 {
-mrb_value vData, vURL, vHeaders;
-char	*strData;
-char	*strURL;
+const char *tmpFilename = "wifitmp.tmp";
 int		sBody, sHeader;
 int sla, cnt;
 int koron = 0;
 char sData[1024];
 int len;
+File fp, fd;
 
-	mrb_get_args(mrb, "SAS", &vURL, &vHeaders, &vData);
-
-	strData = RSTRING_PTR(vData);
 	sBody = strlen(strData);
 
-	strURL = RSTRING_PTR(vURL);
-
+	RbSerial[WIFI_SERIAL]->println("AT+CIPMUX=1");
+	getData(WIFI_WAIT_MSEC);
+	//httpsかチェック
+	if (ssl) {
+		DEBUG_PRINTLN1("AT+CIPSSLSIZE=4096");
+		RbSerial[WIFI_SERIAL]->println("AT+CIPSSLSIZE=4096");
+		getData(WIFI_WAIT_MSEC);
+	}
 	//URLからドメインを分割する
 	len = strlen(strURL);
 	sla = len;
@@ -1602,21 +1794,30 @@ int len;
 	}
 	WiFiData[sla] = 0;
 
-	RbSerial[WIFI_SERIAL]->print("AT+CIPSTART=4,\"TCP\",\"");
+	if (ssl) {
+		RbSerial[WIFI_SERIAL]->print("AT+CIPSTART=4,\"SSL\",\"");
+	} else {
+		RbSerial[WIFI_SERIAL]->print("AT+CIPSTART=4,\"TCP\",\"");
+	}
 	RbSerial[WIFI_SERIAL]->print((const char*)WiFiData);
 	RbSerial[WIFI_SERIAL]->print("\",");
 	if( koron < sla){
 		RbSerial[WIFI_SERIAL]->println((const char*)&WiFiData[koron + 1]);
 	}
 	else{
-		RbSerial[WIFI_SERIAL]->println("80");
+		if (ssl) {
+			RbSerial[WIFI_SERIAL]->println("443");
+		} else {
+			RbSerial[WIFI_SERIAL]->println("80");
+		}
 	}
 
 	//OK 0d0a か ERROR 0d0aが来るまで WiFiData[]に読むか、指定されたシリアルポートに出力します
 	getData(WIFI_WAIT_MSEC);
 
 	if( !(WiFiData[strlen((const char*)WiFiData)-2] == 'K' || WiFiData[strlen((const char*)WiFiData)-3] == 'K')){
-		return mrb_fixnum_value( 0 );
+		DEBUG_PRINTLN1("WIFI ERR");
+		return 0;
 	}
 
 	//****** AT+CIPSEND コマンド ******
@@ -1658,16 +1859,10 @@ int len;
 	}
 
 	//ヘッダ情報を付けます
-	{
-		int n = RARRAY_LEN( vHeaders );
-		mrb_value hes;
-		for (int i=0; i<n; i++) {
-			hes = mrb_ary_ref(mrb, vHeaders, i);
-			
-			//ヘッダの追記
-			strcat(sData, RSTRING_PTR(hes));
-			strcat(sData, "\r\n");
-		}
+	for (int i=0; i<n; i++) {
+		//ヘッダの追記
+		strcat(sData, head[i]);
+		strcat(sData, "\r\n");
 	}
 
 	//改行のみの行を追加する
@@ -1684,7 +1879,8 @@ int len;
 	//OK 0d0a か ERROR 0d0aが来るまで WiFiData[]に読むか、指定されたシリアルポートに出力します
 	getData(WIFI_WAIT_MSEC);
 	if( !(WiFiData[strlen((const char*)WiFiData)-2] == 'K' || WiFiData[strlen((const char*)WiFiData)-3] == 'K')){
-		return mrb_fixnum_value( 0 );
+		DEBUG_PRINTLN1("WIFI ERR");
+		return 0;
 	}
 
 	//****** 送信データ受付モードになったので、http POSTデータを送信する ******
@@ -1701,14 +1897,23 @@ int len;
 		getData(WIFI_WAIT_MSEC);
 
 		if( !(WiFiData[strlen((const char*)WiFiData)-2] == 'K' || WiFiData[strlen((const char*)WiFiData)-3] == 'K')){
-			return mrb_fixnum_value( 0 );
+			DEBUG_PRINTLN1("WIFI ERR");
+			return 0;
 		}
 	}
 	//****** 送信終了 ******
 
 	//****** 受信開始 ******
+	if (SD.exists(tmpFilename)){
+		SD.remove(tmpFilename);
+	}
+	if( !(fp = SD.open(tmpFilename, FILE_WRITE)) ){
+		return 6;
+	}
+
 	unsigned long times;
 	unsigned int wait_msec = WIFI_WAIT_MSEC;
+	unsigned char recv[2];
 	times = millis();
 
 	while(true){
@@ -1717,22 +1922,76 @@ int len;
 			break;
 		}
 
-		while(len = RbSerial[WIFI_SERIAL]->available())
+		while((len = RbSerial[WIFI_SERIAL]->available()) != 0)
 		{
 			for(int i=0; i<len; i++){
-				RbSerial[WIFI_SERIAL]->read();
+				//RbSerial[WIFI_SERIAL]->read();
+				recv[0] = (unsigned char)RbSerial[WIFI_SERIAL]->read();
+				if (n >= 4) {
+					fp.write( (unsigned char*)recv, 1);
+				}
 			}
 			times = millis();
 			wait_msec = 100;	//データが届き始めたら、100ms待ちに変更する
 		}
 	}
+	fp.flush();
+	fp.close();
 	//****** 受信終了 ******
+	if (strDFname) {
+		//受信データに '\r\n+\r\n+IPD,4,****:'というデータがあるので削除します
+		int ret = CutGarbageData("\r\n+IPD,4,", tmpFilename, (const char *)strDFname);
+		if(ret != 1){
+			return 7;
+		}
+	}
 
 	//****** AT+CIPCLOSE コマンド ******
 	RbSerial[WIFI_SERIAL]->println("AT+CIPCLOSE=4");
 	getData(WIFI_WAIT_MSEC);
 
-	return mrb_fixnum_value( 1 );
+	return 1;
+}
+
+mrb_value mrb_wifi_post_sub(mrb_state *mrb, mrb_value self, int ssl)
+{
+mrb_value vData, vURL, vHeaders, vDFname;
+char	*strData;
+char	*strURL;
+char	*strDFname = (char *)NULL;
+char	**head;
+int ret;
+
+	int n = mrb_get_args(mrb, "SAS|S", &vURL, &vHeaders, &vData, &vDFname);
+
+	strData = RSTRING_PTR(vData);
+	strURL = RSTRING_PTR(vURL);
+	if (n >= 4) {
+		strDFname = RSTRING_PTR(vDFname);
+	}
+	{
+		n = RARRAY_LEN(vHeaders);
+		head = (char **)malloc(sizeof(char *)*n);
+		if (!head)
+			return mrb_fixnum_value(8);
+		mrb_value hes;
+		for (int i = 0; i<n; i++) {
+			hes = mrb_ary_ref(mrb, vHeaders, i);
+			head[i] = RSTRING_PTR(hes);
+		}
+	}
+	ret = wifi_post(strURL, strData, strDFname, n, head, ssl);
+	return mrb_fixnum_value(ret);
+}
+
+mrb_value mrb_wifi_post(mrb_state *mrb, mrb_value self)
+{
+	return mrb_wifi_post_sub(mrb, self, 0);
+}
+
+mrb_value mrb_wifi_post_ssl(mrb_state *mrb, mrb_value self)
+{
+	return mrb_wifi_post_sub(mrb, self, 1);
 }
 
 //**************************************************
@@ -1792,7 +2051,7 @@ mrb_value arv[2];
 					break;
 				}
 
-				while(len = RbSerial[WIFI_SERIAL]->available())
+				while((len = RbSerial[WIFI_SERIAL]->available()) != 0)
 				{
 					for(int i=0; i<len; i++){
 						recv[0] = (unsigned char)RbSerial[WIFI_SERIAL]->read();
@@ -1967,7 +2226,7 @@ mrb_value mrb_wifi_server(mrb_state *mrb, mrb_value self)
 	if (n < 1){
 		if (RbSerial[WIFI_SERIAL]->available() > 0){
 			unsigned char recv[256];
-			unsigned char c;
+			unsigned char c = 0;
 			bool rwriteFlg = true;
 			bool snmFlg = false;
 			bool crnFlg = false;
@@ -2323,6 +2582,624 @@ int decode = 0;
 	return base64_decode(mrb, (char const*)fsour, (char const*)fdesc);
 }
 
+static char hex_to_num(char ch)
+{
+	if (('0' <= ch) && (ch <= '9')) {
+		return (ch - '0');
+	} else if (('A' <= ch) && (ch <= 'F')) {
+		return (ch - 'A' + 10);
+	} else if (('a' <= ch) && (ch <= 'f')) {
+		return (ch - 'a' + 10);
+	}
+	return ch;
+}
+
+#define URL_BUF_SIZE 1024
+static char url_buf[URL_BUF_SIZE];
+static char hex[] = "0123456789ABCDEF";
+static char num_to_hex(char num) {
+	return hex[num & 0xf];
+}
+
+static int _isalnum(char ch)
+{
+	if ((('0' <= ch) && (ch <= '9')) || (('A' <= ch) && (ch <= 'Z')) || (('a' <= ch) && (ch <= 'z')))
+		return 1;
+	else
+		return 0;
+}
+
+static char *_url_encode(char *str, char *dst, int size)
+{
+	char *pstr = str;
+	char *pbuf = dst;
+	if (size == 0)
+		return dst;
+	size--;
+	while (size && (*pstr)) {
+		if (_isalnum(*pstr) || *pstr == '-' || *pstr == '_' || *pstr == '.' || *pstr == '~') {
+			*pbuf++ = *pstr;
+			size--;
+		} else if (*pstr == ' ') {
+			*pbuf++ = '+';
+			size --;
+		} else {
+			*pbuf++ = '%';
+			size--; if (size == 0) break;
+			*pbuf++ = num_to_hex(*pstr >> 4);
+			size--; if (size == 0) break;
+			*pbuf++ = num_to_hex(*pstr & 0xf);
+		}
+		pstr++;
+	}
+	*pbuf = '\0';
+	return dst;
+}
+
+static char *_url_decode(char *str, char *dst, int size)
+{
+	char *pstr = str;
+	char *pbuf = dst;
+	if (size == 0)
+		return dst;
+	size --;
+	while (size && (*pstr)) {
+		if (*pstr == '%') {
+			if (pstr[1] && pstr[2]) {
+				*pbuf++ = hex_to_num(pstr[1]) << 4 | hex_to_num(pstr[2]);
+				pstr += 2;
+			}
+		} else if (*pstr == '+') {
+			*pbuf++ = ' ';
+		} else {
+			*pbuf++ = *pstr;
+		}
+		pstr++;
+		size--;
+	}
+	*pbuf = '\0';
+	return dst;
+}
+
+mrb_value mrb_url_encode(mrb_state *mrb, mrb_value self)
+{
+	mrb_value vstr;
+	char *str;
+	char *dst = (char *)url_buf;
+
+	mrb_get_args(mrb, "S", &vstr);
+	str = RSTRING_PTR(vstr);
+	dst = _url_encode(str, dst, URL_BUF_SIZE);
+	return mrb_str_new_cstr(mrb, (const char*)dst);
+}
+
+mrb_value mrb_url_decode(mrb_state *mrb, mrb_value self)
+{
+	mrb_value vstr;
+	char *str;
+	char *dst = (char *)url_buf;
+
+	mrb_get_args(mrb, "S", &vstr);
+	str = RSTRING_PTR(vstr);
+	dst = _url_decode(str, dst, URL_BUF_SIZE);
+	return mrb_str_new_cstr(mrb, (const char*)dst);
+}
+
+mrb_value mrb_mktime(mrb_state *mrb, mrb_value self)
+{
+	mrb_value vtm;
+	int n;
+	int itm[6];
+	time_t	t;
+	struct tm work_tm;
+
+	for (int i = 0; i < 6; i++) {
+		itm[i] = 0;
+	}
+	mrb_get_args(mrb, "A", &vtm);
+	n = RARRAY_LEN(vtm);
+	if (n > 6)
+		n = 6;
+	for (int i = 0; i < n; i++) {
+		itm[i] = mrb_fixnum(mrb_ary_ref(mrb, vtm, i));
+	}
+    work_tm.tm_year = itm[0] - 1900;
+    work_tm.tm_mon = itm[1];
+    work_tm.tm_mday = itm[2];
+    work_tm.tm_hour = itm[3];
+    work_tm.tm_min = itm[4];
+    work_tm.tm_sec = itm[5];
+    work_tm.tm_isdst = -1;
+    t= mktime(&work_tm);
+    return mrb_fixnum_value(t);
+}
+
+//**************************************************
+// hmac-sha1
+// ref: http://www.deadhat.com/wlancrypto/hmac_sha1.c
+//**************************************************
+
+/****************************************************************/
+/* 802.11i HMAC-SHA-1 Test Code                                 */
+/* Copyright (c) 2002, David Johnston                           */
+/* Author: David Johnston                                       */
+/* Email (home): dj@deadhat.com                                 */
+/* Email (general): david.johnston@ieee.org                     */
+/* Version 0.1                                                  */
+/*
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+/*                                                              */
+/* This code implements the NIST HMAC-SHA-1 algorithm as used   */
+/* the IEEE 802.11i security spec.                              */
+/*                                                              */
+/* Supported message length is limited to 4096 characters       */
+/* ToDo:                                                        */
+/*   Sort out endian tolerance. Currently little endian.        */
+/****************************************************************/
+
+#define MAX_MESSAGE_LENGTH 2048
+
+/****************************************/
+/* sha1()                               */
+/* Performs the NIST SHA-1 algorithm    */
+/****************************************/
+static unsigned long int ft(int t, unsigned long int x, unsigned long int y, unsigned long int z)
+{
+	unsigned long int a,b,c;
+	if (t < 20) {
+		a = x & y;
+		b = (~x) & z;
+		c = a ^ b;
+	} else if (t < 40) {
+		c = x ^ y ^ z;
+	} else if (t < 60) {
+		a = x & y;
+		b = a ^ (x & z);
+		c = b ^ (y & z);
+	} else if (t < 80) {
+		c = (x ^ y) ^ z;
+	}
+	return c;
+}
+
+static unsigned long int k(int t)
+{
+	unsigned long int c;
+	if (t < 20) {
+		c = 0x5a827999;
+	} else if (t < 40) {
+		c = 0x6ed9eba1;
+	} else if (t < 60) {
+		c = 0x8f1bbcdc;
+	} else if (t < 80) {
+		c = 0xca62c1d6;
+	}
+	return c;
+}
+
+//static unsigned long int rotr(int bits, unsigned long int a)
+//{
+//	unsigned long int c,d,e,f,g;
+//	c = (0x0001 << bits)-1;
+//	d = ~c;
+//	e = (a & d) >> bits;
+//	f = (a & c) << (32 - bits);
+//	g = e | f;
+//	return (g & 0xffffffff );
+//}
+
+static unsigned long int rotl(int bits, unsigned long int a)
+{
+	unsigned long int c,d,e,f,g;
+	c = (0x0001 << (32-bits))-1;
+	d = ~c;
+	e = (a & c) << bits;
+	f = (a & d) >> (32 - bits);
+	g = e | f;
+	return (g & 0xffffffff );
+}
+
+static void sha1(unsigned char *message, int message_length, unsigned char *digest)
+{
+	int i;
+	int num_blocks;
+	int block_remainder;
+	int padded_length;
+
+	unsigned long int l;
+	unsigned long int t;
+	unsigned long int h[5];
+	unsigned long int a, b, c, d, e;
+	unsigned long int w[80];
+	unsigned long int temp;
+
+	/* Calculate the number of 512 bit blocks */
+	padded_length = message_length + 8; /* Add length for l */
+	padded_length = padded_length + 1; /* Add the 0x01 bit postfix */
+
+	l = message_length * 8;
+
+	num_blocks = padded_length / 64;
+	block_remainder = padded_length % 64;
+
+	if (block_remainder > 0) {
+		num_blocks++;
+	}
+
+	padded_length = padded_length + (64 - block_remainder);
+
+	/* clear the padding field */
+	for (i = message_length; i < (num_blocks * 64); i++) {
+		message[i] = 0x00;
+	}
+
+	/* insert b1 padding bit */
+	message[message_length] = 0x80;
+
+	/* Insert l */
+	message[(num_blocks * 64) - 1] = (unsigned char) (l & 0xff);
+	message[(num_blocks * 64) - 2] = (unsigned char) ((l >> 8) & 0xff);
+	message[(num_blocks * 64) - 3] = (unsigned char) ((l >> 16) & 0xff);
+	message[(num_blocks * 64) - 4] = (unsigned char) ((l >> 24) & 0xff);
+
+	/* Set initial hash state */
+	h[0] = 0x67452301;
+	h[1] = 0xefcdab89;
+	h[2] = 0x98badcfe;
+	h[3] = 0x10325476;
+	h[4] = 0xc3d2e1f0;
+
+	for (i = 0; i < num_blocks; i++) {
+		/* Prepare the message schedule */
+		for (t = 0; t < 80; t++) {
+			if (t < 16) {
+				w[t] = (256 * 256 * 256) * message[(i * 64) + (t * 4)];
+				w[t] += (256 * 256) * message[(i * 64) + (t * 4) + 1];
+				w[t] += (256) * message[(i * 64) + (t * 4) + 2];
+				w[t] += message[(i * 64) + (t * 4) + 3];
+			} else if (t < 80) {
+				w[t] = rotl(1, (w[t - 3] ^ w[t - 8] ^ w[t - 14] ^ w[t - 16]));
+			}
+		}
+		/* Initialize the five working variables */
+		a = h[0];
+		b = h[1];
+		c = h[2];
+		d = h[3];
+		e = h[4];
+
+		/* iterate a-e 80 times */
+		for (t = 0; t < 80; t++) {
+			temp = (rotl(5, a) + ft(t, b, c, d)) & 0xffffffff;
+			temp = (temp + e) & 0xffffffff;
+			temp = (temp + k(t)) & 0xffffffff;
+			temp = (temp + w[t]) & 0xffffffff;
+			e = d;
+			d = c;
+			c = rotl(30, b);
+			b = a;
+			a = temp;
+		}
+
+		/* compute the ith intermediate hash value */
+		h[0] = (a + h[0]) & 0xffffffff;
+		h[1] = (b + h[1]) & 0xffffffff;
+		h[2] = (c + h[2]) & 0xffffffff;
+		h[3] = (d + h[3]) & 0xffffffff;
+		h[4] = (e + h[4]) & 0xffffffff;
+	}
+
+	digest[3] = (unsigned char) (h[0] & 0xff);
+	digest[2] = (unsigned char) ((h[0] >> 8) & 0xff);
+	digest[1] = (unsigned char) ((h[0] >> 16) & 0xff);
+	digest[0] = (unsigned char) ((h[0] >> 24) & 0xff);
+	digest[7] = (unsigned char) (h[1] & 0xff);
+	digest[6] = (unsigned char) ((h[1] >> 8) & 0xff);
+	digest[5] = (unsigned char) ((h[1] >> 16) & 0xff);
+	digest[4] = (unsigned char) ((h[1] >> 24) & 0xff);
+	digest[11] = (unsigned char) (h[2] & 0xff);
+	digest[10] = (unsigned char) ((h[2] >> 8) & 0xff);
+	digest[9] = (unsigned char) ((h[2] >> 16) & 0xff);
+	digest[8] = (unsigned char) ((h[2] >> 24) & 0xff);
+	digest[15] = (unsigned char) (h[3] & 0xff);
+	digest[14] = (unsigned char) ((h[3] >> 8) & 0xff);
+	digest[13] = (unsigned char) ((h[3] >> 16) & 0xff);
+	digest[12] = (unsigned char) ((h[3] >> 24) & 0xff);
+	digest[19] = (unsigned char) (h[4] & 0xff);
+	digest[18] = (unsigned char) ((h[4] >> 8) & 0xff);
+	digest[17] = (unsigned char) ((h[4] >> 16) & 0xff);
+	digest[16] = (unsigned char) ((h[4] >> 24) & 0xff);
+}
+
+/******************************************************/
+/* hmac-sha1()                                        */
+/* Performs the hmac-sha1 keyed secure hash algorithm */
+/******************************************************/
+/* Moving local variables to static variables for not using stack  */
+static unsigned char k0[64];
+static unsigned char k0xorIpad[64];
+static unsigned char step7data[64];
+static unsigned char step8data[64 + 20];
+static unsigned char step5data[MAX_MESSAGE_LENGTH + 128];
+
+static void hmac_sha1(unsigned char *key, int key_length, unsigned char *data, int data_length, unsigned char *digest)
+{
+	int b = 64; /* blocksize */
+	unsigned char ipad = 0x36;
+	unsigned char opad = 0x5c;
+	int i;
+
+	for (i = 0; i < 64; i++) {
+		k0[i] = 0x00;
+	}
+	if (key_length != b) /* Step 1 */
+	{
+		/* Step 2 */
+		if (key_length > b) {
+			sha1(key, key_length, digest);
+			for (i = 0; i < 20; i++) {
+				k0[i] = digest[i];
+			}
+		} else if (key_length < b) /* Step 3 */
+		{
+			for (i = 0; i < key_length; i++) {
+				k0[i] = key[i];
+			}
+		}
+	} else {
+		for (i = 0; i < b; i++) {
+			k0[i] = key[i];
+		}
+	}
+	/* Step 4 */
+	for (i = 0; i < 64; i++) {
+		k0xorIpad[i] = k0[i] ^ ipad;
+	}
+	/* Step 5 */
+	for (i = 0; i < 64; i++) {
+		step5data[i] = k0xorIpad[i];
+	}
+	for (i = 0; i < data_length; i++) {
+		step5data[i + 64] = data[i];
+	}
+	/* Step 6 */
+	sha1(step5data, data_length + b, digest);
+	/* Step 7 */
+	for (i = 0; i < 64; i++) {
+		step7data[i] = k0[i] ^ opad;
+	}
+	/* Step 8 */
+	for (i = 0; i < 64; i++) {
+		step8data[i] = step7data[i];
+	}
+	for (i = 0; i < 20; i++) {
+		step8data[i + 64] = digest[i];
+	}
+	/* Step 9 */
+	sha1(step8data, b + 20, digest);
+}
+
+#define DIGEST_SIZE	20
+static unsigned char digest[DIGEST_SIZE];
+
+//**************************************************
+// sha1 hash計算
+//　戻り値
+// string
+// ToDo: size error handling
+//**************************************************
+mrb_value mrb_hmac_sha1(mrb_state *mrb, mrb_value self)
+{
+	mrb_value vkey, vdata;
+	char *key;
+	char *data;
+	int key_len;
+	int data_len;
+
+	mrb_get_args(mrb, "SiSi", &vdata, &data_len, &vkey, &key_len);
+	key = RSTRING_PTR(vkey);
+	data = RSTRING_PTR(vdata);
+	hmac_sha1((unsigned char *)key, key_len, (unsigned char *)data, data_len, (unsigned char *)digest);
+	return mrb_str_new(mrb, (const char*)digest, DIGEST_SIZE);
+}
+
+//**************************************************
+// base64 encode and decode
+// http://www.mycplus.com/source-code/c-source-code/base64-encode-decode/
+//**************************************************
+static char encoding_table[] = { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I',
+		'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',
+		'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k',
+		'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y',
+		'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/' };
+static char decoding_init = 0;
+static char decoding_table[256] = {0};
+static int mod_table[] = { 0, 2, 1 };
+#define BASE64_MAX	1024
+static unsigned char base64_buf[BASE64_MAX];
+
+static char *base64_encode(const unsigned char *data, int input_length, char *encoded_data, int *output_length)
+{
+	*output_length = 4 * ((input_length + 2) / 3);
+
+	for (int i = 0, j = 0; i < input_length;) {
+
+		uint32_t octet_a = i < input_length ? (unsigned char) data[i++] : 0;
+		uint32_t octet_b = i < input_length ? (unsigned char) data[i++] : 0;
+		uint32_t octet_c = i < input_length ? (unsigned char) data[i++] : 0;
+
+		uint32_t triple = (octet_a << 0x10) + (octet_b << 0x08) + octet_c;
+
+		encoded_data[j++] = encoding_table[(triple >> 3 * 6) & 0x3F];
+		encoded_data[j++] = encoding_table[(triple >> 2 * 6) & 0x3F];
+		encoded_data[j++] = encoding_table[(triple >> 1 * 6) & 0x3F];
+		encoded_data[j++] = encoding_table[(triple >> 0 * 6) & 0x3F];
+	}
+
+	for (int i = 0; i < mod_table[input_length % 3]; i++)
+		encoded_data[*output_length - 1 - i] = '=';
+	return encoded_data;
+}
+
+static void build_decoding_table()
+{
+	for (int i = 0; i < 64; i++)
+		decoding_table[(unsigned char) encoding_table[i]] = i;
+}
+
+static char *base64_decode(const unsigned char *data, int input_length, char *decoded_data, int *output_length)
+{
+	if (decoding_init == 0) {
+		build_decoding_table();
+		decoding_init = 1;
+	}
+	if (input_length % 4 != 0)
+		return NULL;
+	*output_length = input_length / 4 * 3;
+	if (data[input_length - 1] == '=')
+		(*output_length)--;
+	if (data[input_length - 2] == '=')
+		(*output_length)--;
+
+	for (int i = 0, j = 0; i < input_length;) {
+		uint32_t sextet_a =
+				data[i] == '=' ? 0 & i++ : decoding_table[data[i++]];
+		uint32_t sextet_b =
+				data[i] == '=' ? 0 & i++ : decoding_table[data[i++]];
+		uint32_t sextet_c =
+				data[i] == '=' ? 0 & i++ : decoding_table[data[i++]];
+		uint32_t sextet_d =
+				data[i] == '=' ? 0 & i++ : decoding_table[data[i++]];
+
+		uint32_t triple = (sextet_a << 3 * 6) + (sextet_b << 2 * 6)
+				+ (sextet_c << 1 * 6) + (sextet_d << 0 * 6);
+
+		if (j < *output_length)
+			decoded_data[j++] = (triple >> 2 * 8) & 0xFF;
+		if (j < *output_length)
+			decoded_data[j++] = (triple >> 1 * 8) & 0xFF;
+		if (j < *output_length)
+			decoded_data[j++] = (triple >> 0 * 8) & 0xFF;
+	}
+	return decoded_data;
+}
+
+//**************************************************
+// base64 エンコード
+//　戻り値
+// string
+// ToDo: size error handling
+//**************************************************
+mrb_value mrb_base64_encode(mrb_state *mrb, mrb_value self)
+{
+	mrb_value vdata;
+	char *data;
+	int slen, dlen;
+
+	mrb_get_args(mrb, "Si", &vdata, &slen);
+	data = RSTRING_PTR(vdata);
+	base64_encode((const unsigned char *)data, slen, (char *)base64_buf, &dlen);
+	return mrb_str_new(mrb, (const char*)base64_buf, dlen);
+}
+
+//**************************************************
+// base64 デコード
+//　戻り値
+// string
+// ToDo: size error handling
+//**************************************************
+mrb_value mrb_base64_decode(mrb_state *mrb, mrb_value self)
+{
+	mrb_value vdata;
+	char *data;
+	int slen, dlen = 0;
+
+	mrb_get_args(mrb, "Si", &vdata, &slen);
+	data = RSTRING_PTR(vdata);
+	base64_decode((const unsigned char *)data, slen, (char *)base64_buf, &dlen);
+	return mrb_str_new(mrb, (const char*)base64_buf, dlen);
+}
+
+//**************************************************
+// ntp serverからtransfer timeを取得します
+//  WiFi.ntp( ntp_server_ip, [time_flag] )
+//
+//　戻り値
+//　ntp transfer time (time_flag == 0)
+//　ntp transfer time in unix time format (time_flag == 1)
+//**************************************************
+#define NTP_PACKT_SIZE	48
+static unsigned char ntp_send[NTP_PACKT_SIZE] =
+{
+	0xe3, 0x00, 0x06, 0xec, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+static unsigned char ntp_recv[60];
+#define NTP_SEND_PORT	123
+#define NTP_LOCAL_PORT	8788
+
+uint32_t ntp(char *ipaddr, int tf)
+{
+	int cnt;
+	int ret;
+	int num = 1;
+	uint32_t time = 0;
+
+	ret = wifi_udpOpen(num, ipaddr, NTP_SEND_PORT, NTP_LOCAL_PORT);
+	if (!ret) {
+		DEBUG_PRINTLN1("wifi_udpOpen ERR")
+		return 0xffffffff;
+	}
+	ret = wifi_send(num, (char *)ntp_send, 48);
+	if (ret == 0) {
+		DEBUG_PRINTLN1("wifi_send ERR")
+		return 0xffffffff;
+	}
+	ret = wifi_recv(num, (char *)ntp_recv, &cnt);
+	if (ret != 1) {
+		DEBUG_PRINTLN1("wifi_recv ERR")
+		return 0xffffffff;
+	}
+	wifi_cClose(num);
+	time = ((uint32_t)ntp_recv[40] << 24) +
+			((uint32_t)ntp_recv[41] << 16) +
+			((uint32_t)ntp_recv[42] << 8) +
+			((uint32_t)ntp_recv[43] << 0);
+	if (tf == 1) {
+		time -= 2208988800;	// conversion to Unixtime
+	}
+	return time;
+}
+
+mrb_value mrb_ntp(mrb_state *mrb, mrb_value self)
+{
+	mrb_value vts;
+	char *ts;
+	int tf;
+	uint32_t time;
+
+	mrb_get_args(mrb, "S|i", &vts, &tf);
+	ts = RSTRING_PTR(vts);
+	time = ntp(ts, tf);
+	return mrb_fixnum_value(time);
+}
+
 //**************************************************
 // ライブラリを定義します
 //**************************************************
@@ -2405,8 +3282,8 @@ int esp8266_Init(mrb_state *mrb)
 	mrb_define_module_function(mrb, wifiModule, "send", mrb_wifi_send, MRB_ARGS_REQ(2) | MRB_ARGS_OPT(1));
 	mrb_define_module_function(mrb, wifiModule, "recv", mrb_wifi_recv, MRB_ARGS_REQ(1));
 
-	mrb_define_module_function(mrb, wifiModule, "httpPostSD", mrb_wifi_postSD, MRB_ARGS_REQ(3));
-	mrb_define_module_function(mrb, wifiModule, "httpPost", mrb_wifi_post, MRB_ARGS_REQ(3));
+	mrb_define_module_function(mrb, wifiModule, "httpPostSD", mrb_wifi_postSD, MRB_ARGS_REQ(3)|MRB_ARGS_OPT(1));
+	mrb_define_module_function(mrb, wifiModule, "httpPost", mrb_wifi_post, MRB_ARGS_REQ(3)|MRB_ARGS_OPT(1));
 
 	mrb_define_module_function(mrb, wifiModule, "cClose", mrb_wifi_cClose, MRB_ARGS_REQ(1));
 
@@ -2419,6 +3296,24 @@ int esp8266_Init(mrb_state *mrb)
 	mrb_define_module_function(mrb, wifiModule, "base64", mrb_wifi_base64, MRB_ARGS_REQ(2) | MRB_ARGS_OPT(1));
 
 	mrb_define_module_function(mrb, wifiModule, "bypass", mrb_wifi_bypass, MRB_ARGS_NONE());
+/* The followings are added by KS */
 
+	mrb_define_module_function(mrb, wifiModule, "httpsGetSD", mrb_wifi_getSD_ssl, MRB_ARGS_REQ(2)|MRB_ARGS_OPT(1));
+	mrb_define_module_function(mrb, wifiModule, "httpsGet", mrb_wifi_get_ssl, MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1));
+
+	mrb_define_module_function(mrb, wifiModule, "httpsPostSD", mrb_wifi_postSD_ssl, MRB_ARGS_REQ(3)|MRB_ARGS_OPT(1));
+	mrb_define_module_function(mrb, wifiModule, "httpsPost", mrb_wifi_post_ssl, MRB_ARGS_REQ(3)|MRB_ARGS_OPT(1));
+
+	mrb_define_module_function(mrb, wifiModule, "url_encode", mrb_url_encode, MRB_ARGS_REQ(1));
+	mrb_define_module_function(mrb, wifiModule, "url_decode", mrb_url_decode, MRB_ARGS_REQ(1));
+
+	mrb_define_module_function(mrb, wifiModule, "mktime", mrb_mktime, MRB_ARGS_REQ(1));
+
+	mrb_define_module_function(mrb, wifiModule, "hmac_sha1", mrb_hmac_sha1, MRB_ARGS_REQ(4));
+
+	mrb_define_module_function(mrb, wifiModule, "base64_encode", mrb_base64_encode, MRB_ARGS_REQ(2));
+	mrb_define_module_function(mrb, wifiModule, "base64_decode", mrb_base64_decode, MRB_ARGS_REQ(2));
+
+	mrb_define_module_function(mrb, wifiModule, "ntp", mrb_ntp, MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1));
 	return 1;
 }

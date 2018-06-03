@@ -17,7 +17,7 @@
 #define MISAKIFONT4X8
 #define MISAKIFONT6X12
 #define MISAKIFONT8X8
-#define MISAKIFONT12X12
+//#define MISAKIFONT12X12
 
 #include "sFont.h"
 #ifdef MISAKIFONT4X8
@@ -44,7 +44,7 @@
 #  define DEBUG_PRINT(m,v)    // do nothing
 #endif
 
-static FONT_TBL *fontTblList[] = {
+static const FONT_TBL *fontTblList[] = {
 #ifdef MISAKIFONT4X8
 	(FONT_TBL *)&misaki_font4x8_tbl,
 #endif
@@ -63,13 +63,17 @@ static FONT_TBL *fontTblList[] = {
 Font MisakiFont4x8((FONT_TBL *)&misaki_font4x8_tbl);
 Font MisakiFont6x12((FONT_TBL *)&misaki_font6x12_tbl);
 Font MisakiFont8x8((FONT_TBL *)&misaki_font8x8_tbl);
+#ifdef MISAKIFONT12X12
 Font MisakiFont12x12((FONT_TBL *)&misaki_font12x12_tbl);
+#endif
 
 Font *fontList[] = {
 	(Font *)&MisakiFont4x8,
 	(Font *)&MisakiFont6x12,
 	(Font *)&MisakiFont8x8,
+#ifdef MISAKIFONT12X12
 	(Font *)&MisakiFont12x12,
+#endif
 };
 
 Font::Font(FONT_TBL *font_tbl)
@@ -105,39 +109,39 @@ int Font::fontBytes(void)
 unsigned char *Font::fontData(int idx)
 {
 	unsigned char *p;
-	if (_font_tbl->font_type == FONT_ASCII) {
+	if (idx < 0x100) {
 		idx &= 0xff;
 		DEBUG_PRINT("font8 idx: ", idx);
 		p = _font_tbl->ascii_font_tbl->ascii_font_data;
 		p += (idx * fontBytes());
 		return p;
 	} else {
-		unsigned short i;
-		unsigned short fidx;
-		unsigned short tblH = idx / CUNIFONT_TBL_SIZE;
-		unsigned short tblL = idx % CUNIFONT_TBL_SIZE;
+		DEBUG_PRINT("font16 idx: ", idx);
+		int i;
+		int fidx;
+		int tblH = idx / CUNIFONT_TBL_SIZE;
+		int tblL = idx % CUNIFONT_TBL_SIZE;
 		unsigned char mask = (unsigned char) (1 << (idx & 7));
 		unsigned char *font_map = _font_tbl->unicode_font_tbl->CUniFontMap;
 		unsigned short *font_idx = _font_tbl->unicode_font_tbl->CUniFontIdx;
-		if (font_map[(tblH * CUNIFONT_TBL_SIZE) + (tblL / 8)] & mask) {
+		if (font_map[(tblH * CUNIFONT_TBL_SIZE)/8 + tblL/8] & mask) {
 			fidx = font_idx[tblH];
 			for (i = 0; i < tblL; i++) {
 				mask = (1 << (i & 7));
-				if (font_map[(tblH * CUNIFONT_TBL_SIZE) + (i / 8)] & mask) {
+				if (font_map[(tblH * CUNIFONT_TBL_SIZE)/8 + (i / 8)] & mask) {
 					fidx++;
 				}
-			} DEBUG_PRINT("font16 fidx: ", fidx);
-			p =
-					(unsigned char *) _font_tbl->unicode_font_tbl->unicode_font_data;
-			p += (fidx * _font_bytes);
-		} else
+			}
+			DEBUG_PRINT("font16 fidx: ", fidx);
+			p = _font_tbl->unicode_font_tbl->unicode_font_data;
+			p += (fidx * fontBytes());
+		} else {
+			DEBUG_PRINT("font16 fidx: ", -1);
 			p = (unsigned char *) NULL;
+		}
 		return p;
 	}
 }
-
-#define U16_BUF_MAX	256
-static unsigned char u16[U16_BUF_MAX];
 
 static void cnv_u8_to_u16(unsigned char *src, int slen, unsigned char *dst, int dsize, int *dlen)
 {
@@ -145,7 +149,7 @@ static void cnv_u8_to_u16(unsigned char *src, int slen, unsigned char *dst, int 
 	int idst = 0;
 	unsigned char c;
 	unsigned int u = 0;
-	unsigned short *udst = (unsigned short *) dst;
+	unsigned short *udst = (unsigned short *)dst;
 
 	while ((slen > 0) && (idst < dsize)) {
 		len = 0;
@@ -177,11 +181,15 @@ static void cnv_u8_to_u16(unsigned char *src, int slen, unsigned char *dst, int 
 		}
 		DEBUG_PRINT("unicode",u)
 		if ((0x10000 <= u) && (u <= 0x10FFFF)) {
-			udst[idst] = (unsigned short)(0xD800 | (((u & 0x1FFC00) >> 10) - 0x40));
-			udst[idst+1] = (unsigned short)(0xDC00 | (u & 0x3FF));
+			if (udst != NULL) {
+				udst[idst] = (unsigned short)(0xD800 | (((u & 0x1FFC00) >> 10) - 0x40));
+				udst[idst+1] = (unsigned short)(0xDC00 | (u & 0x3FF));
+			}
 			idst += 2;
 		} else {
-			udst[idst] = u;
+			if (udst != NULL) {
+				udst[idst] = u;
+			}
 			idst ++;
 		}
 	}
@@ -220,22 +228,11 @@ mrb_value mrb_font_initialize(mrb_state *mrb, mrb_value self)
 	DATA_TYPE(self) = &font_type;
 	DATA_PTR(self) = NULL;
 	int font_idx;
-#if 0
-	mrb_value vname;
-	char *name;
-	mrb_get_args(mrb, "S", &vname);
-	name = RSTRING_PTR(vname);
-	font_idx = get_font_by_name(name);
-#else
 	mrb_get_args(mrb, "i", &font_idx);
-#endif
 	if (font_idx < 0)
 		font_idx = 0;
-#if 0
-	Font *font = new Font(fontTblList[font_idx]);
-#else
 	Font *font = fontList[font_idx];
-#endif
+	DEBUG_PRINT("mrb_font_initialize font_idx", font_idx);
 	DATA_PTR(self) = font;
 	return self;
 }
@@ -243,26 +240,54 @@ mrb_value mrb_font_initialize(mrb_state *mrb, mrb_value self)
 mrb_value mrb_font_data(mrb_state *mrb, mrb_value self)
 {
 	Font* font = static_cast<Font*>(mrb_get_datatype(mrb, self, &font_type));
-	char *buf;
+	unsigned char *buf;
 	int idx;
 	mrb_get_args(mrb, "i", &idx);
-	buf = (char *)font->fontData(idx);
+	buf = (unsigned char *)font->fontData(idx);
+	DEBUG_PRINT("mrb_font_data buf", (int)buf);
 	return mrb_str_new(mrb, (const char*)buf, font->fontBytes());
 }
 
+#if 0
 mrb_value mrb_font_cnvUtf8ToUnicode(mrb_state *mrb, mrb_value self)
 {
+	mrb_value v;
 	mrb_value vsrc;
 	char *src;
 	int slen;
 	int size = 0;
 	mrb_get_args(mrb, "Si", &vsrc, &slen);
 	src = RSTRING_PTR(vsrc);
-	//len = strlen(src);
 	DEBUG_PRINT("mrb_font_cnvUtf8ToUnicode src len", slen);
-	cnv_u8_to_u16((unsigned char *)src, slen, (unsigned char *)u16, U16_BUF_MAX, &size);
-	return mrb_str_new(mrb, (const char*)u16, size*2);
+	cnv_u8_to_u16((unsigned char *)src, slen, (unsigned char *)NULL, 256, &size);
+	unsigned char *u16 = (unsigned char *)malloc(sizeof(unsigned short)*(size+2));
+	if (u16) {
+		cnv_u8_to_u16((unsigned char *)src, slen, u16, sizeof(unsigned short)*(size+2), &size);
+		v = mrb_str_new(mrb, (const char*)u16, size*2);
+		free(u16);
+	} else {
+		v = mrb_str_new(mrb, (const char*)"*", 1);
+	}
+	return v;
 }
+#else
+#define TMP_BUF_MAX	128
+static unsigned char tmp[TMP_BUF_MAX];
+mrb_value mrb_font_cnvUtf8ToUnicode(mrb_state *mrb, mrb_value self)
+{
+	mrb_value v;
+	mrb_value vsrc;
+	char *src;
+	int slen;
+	int size = 0;
+	mrb_get_args(mrb, "Si", &vsrc, &slen);
+	src = RSTRING_PTR(vsrc);
+	DEBUG_PRINT("mrb_font_cnvUtf8ToUnicode src len", slen);
+	cnv_u8_to_u16((unsigned char *)src, slen, (unsigned char *)tmp, TMP_BUF_MAX, &size);
+	v = mrb_str_new(mrb, (const char*)tmp, size*2);
+	return v;
+}
+#endif
 
 mrb_value mrb_font_getUnicodeAtIndex(mrb_state *mrb, mrb_value self)
 {
@@ -279,6 +304,9 @@ mrb_value mrb_font_getUnicodeAtIndex(mrb_state *mrb, mrb_value self)
 
 void font_Init(mrb_state *mrb)
 {
+	//クラスを作成する前には、強制gcを入れる
+	mrb_full_gc(mrb);
+
 	struct RClass *fontModule = mrb_define_class(mrb, "Font", mrb->object_class);
 	MRB_SET_INSTANCE_TT(fontModule, MRB_TT_DATA);
 
