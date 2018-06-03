@@ -1,3 +1,14 @@
+/*
+ * sJpeg.h
+ *
+ * Portions Copyright (c) 2018 Kentaro Sekimoto
+ *
+ * This software is released under the MIT License.
+ *
+ * Modified from https://github.com/MakotoKurauchi/JPEGDecoder.git
+ *
+ */
+
 #ifndef SJPEG_H
 #define SJPEG_H
 

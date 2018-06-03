@@ -1,3 +1,13 @@
+/*
+ * sJpeg.cpp
+ *
+ * Portions Copyright (c) 2018 Kentaro Sekimoto
+ *
+ * This software is released under the MIT License.
+ *
+ * Modified from https://github.com/MakotoKurauchi/JPEGDecoder.git
+ *
+ */
 #include <Arduino.h>
 
 #include <mruby.h>
