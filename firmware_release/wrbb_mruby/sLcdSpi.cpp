@@ -547,7 +547,19 @@ void LcdSpi::BitBltEx565(int x, int y, int width, int height, uint32_t data[])
 				SPISW_LCD_dat8_0(G4B4(v2));
 			}
 		}
-	} else {
+	} else if (_lcd_id == 2){
+		for (j = 0; j < height; j ++) {
+			ILI9340_addrset(
+					(uint16_t)x,
+					(uint16_t)(y + j),
+					(uint16_t)(x + width),
+					(uint16_t)(y + j + 1));
+			for (i = 0; i < width; i += 1) {
+				v1 = *pdata++;
+				SPISW_LCD_dat8_1((uint8_t)(v1 >> 8));
+				SPISW_LCD_dat8_1((uint8_t)v1);
+			}
+		}
 
 	}
 	if (_spihw) {
