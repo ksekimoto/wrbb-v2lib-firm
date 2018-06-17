@@ -34,6 +34,9 @@
 #include "sSpi.h"
 #include "sFont.h"
 #include "sLcdSpi.h"
+#ifdef MR_TWITTER
+#include "sTwitter.h"
+#endif
 
 #if BOARD == BOARD_GR || FIRMWARE == SDBT || FIRMWARE == SDWF || BOARD == BOARD_P05 || BOARD == BOARD_P06
 	#include "sSdCard.h"
@@ -110,6 +113,9 @@ bool RubyRun(void)
 	spi_Init(mrb);		//SPI関連のメソッドの設定
 	font_Init(mrb);		//Font関連のメソッドの設定
 	lcdSpi_Init(mrb);	//Lcd関連のメソッドの設定
+#ifdef MR_TWITTER
+	twitter_Init(mrb);	//Twitter関連のメソッドの設定
+#endif
 
 	//classtest_Init(mrb);
 

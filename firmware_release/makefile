@@ -1,3 +1,5 @@
+INC_TWITTER = 1
+
 SRCFILES = ./gr_sketch.cpp 
 SRCFILES += ./gr_common/core/HardwareSerial.cpp 
 SRCFILES += ./gr_common/core/main.cpp 
@@ -62,15 +64,15 @@ SRCFILES += ./wrbb_mruby/sSpi.cpp
 SRCFILES += ./wrbb_mruby/sSys.cpp
 SRCFILES += ./wrbb_mruby/sJpeg.cpp
 SRCFILES += ./wrbb_mruby/picojpeg.c
-ifdef MR_TWITTER 
+ifdef INC_TWITTER 
 SRCFILES += ./wrbb_mruby/sTwitter.cpp 
 endif
 SRCFILES += ./wrbb_mruby/sWiFi.cpp 
-ifdef MR_MP3
+ifdef INC_MP3
 SRCFILES += ./wrbb_mruby/sMp3.cpp 
 endif
 SRCFILES += ./wrbb_mruby/sGlobal.cpp
-ifdef MR_MP3
+ifdef INC_MP3
 SRCFILES += ./WavMp3p/WavMp3p.cpp
 SRCFILES += ./WavMp3p/libmad-0.15.1b/bit.c 
 SRCFILES += ./WavMp3p/libmad-0.15.1b/decoder.c 
@@ -145,11 +147,11 @@ OBJFILES += ./wrbb_mruby/sSpi.o
 OBJFILES += ./wrbb_mruby/sSys.o
 OBJFILES += ./wrbb_mruby/sJpeg.o
 OBJFILES += ./wrbb_mruby/picojpeg.o
-ifdef MR_TWITTER 
+ifdef INC_TWITTER 
 OBJFILES += ./wrbb_mruby/sTwitter.o
 endif
 OBJFILES += ./wrbb_mruby/sWiFi.o
-ifdef MR_MP3
+ifdef INC_MP3
 OBJFILES += ./wrbb_mruby/sMp3.o
 OBJFILES += ./WavMp3p/WavMp3p.o
 OBJFILES += ./WavMp3p/utility/wavmp3p_play.o
@@ -172,7 +174,7 @@ OBJFILES += ./gr_common/rx63n/interrupt_handlers.o
 OBJFILES += ./gr_common/rx63n/reboot.o
 OBJFILES += ./gr_common/rx63n/util.o
 OBJFILES += ./gr_common/rx63n/vector_table.o
-ifdef MR_MP3
+ifdef INC_MP3
 OBJFILES += ./WavMp3p/libmad-0.15.1b/bit.o
 OBJFILES += ./WavMp3p/libmad-0.15.1b/decoder.o
 OBJFILES += ./WavMp3p/libmad-0.15.1b/fixed.o
@@ -228,7 +230,7 @@ CCINC += -I./wrbb_eepfile
 CCINC += -I./wrbb_mruby 
 CCINC += -I./wrbb_mruby/include 
 CCINC += -I./wrbb_mruby/include/mruby
-ifdef MR_MP3
+ifdef INC_MP3
 CCINC += -I./WavMp3p 
 CCINC += -I./WavMp3p/libmad-0.15.1b 
 CCINC += -I./WavMp3p/libmad-0.15.1b/msvc++ 
@@ -312,11 +314,11 @@ HEADERFILES += ./wrbb_mruby/sSpi.h
 HEADERFILES += ./wrbb_mruby/sSys.h
 #HEADERFILES += ./wrbb_mruby/sJpeg.h
 HEADERFILES += ./wrbb_mruby/picojpeg.h
-ifdef MR_TWITTER 
+ifdef INC_TWITTER 
 HEADERFILES += ./wrbb_mruby/sTwitter.h 
 endif
 HEADERFILES += ./wrbb_mruby/sWiFi.h 
-ifdef MR_MP3
+ifdef INC_MP3
 HEADERFILES += ./wrbb_mruby/sMp3.h 
 endif
 HEADERFILES += ./wrbb_mruby/sGlobal.h
@@ -394,6 +396,9 @@ CCINC := $(filter-out -I./wrbb_mruby/include/mruby, $(CCINC)) #string.hの重複
 CFLAGS := -Wall -ffunction-sections -fno-function-cse -fsigned-char -fdata-sections -I. -I"$(GNU_PATH)rx-elf\include" -I"$(GNU_PATH)lib\gcc\rx-elf\$(GCC_VERSION)\include" -mno-balign -DARDUINO=100 -DCPPAPP -D__RX_LITTLE_ENDIAN__=1 -O2 -g2 -g -flto -mlittle-endian-data -mcpu=rx600 -m64bit-doubles \
           -DMRB_USE_FLOAT -DMRB_FUNCALL_ARGC_MAX=6 -DMRB_HEAP_PAGE_SIZE=24 -DMRB_USE_IV_SEGLIST -DMRB_IVHASH_INIT_SIZE=3 -DKHASH_DEFAULT_SIZE=2 -DPOOL_PAGE_SIZE=256 -DMRB_BYTECODE_DECODE_OPTION # mruby/build_config.rbを参照のこと
 CFLAGS += -DGRCITRUS
+ifdef INC_TWITTER
+CFLAGS += -DMR_TWITTER
+endif
 AFLAGS := -Wall -ffunction-sections -fno-function-cse -fsigned-char -fdata-sections -I. -I"$(GNU_PATH)rx-elf\include" -I"$(GNU_PATH)lib\gcc\rx-elf\$(GCC_VERSION)\include" -mno-balign -DARDUINO=100 -DCPPAPP -D__RX_LITTLE_ENDIAN__=1 -O2 -g2 -g -flto -mlittle-endian-data -mcpu=rx600 -m64bit-doubles
 AFLAGS += -DGRCITRUS
 SFLAGS :=--gdwarf2
