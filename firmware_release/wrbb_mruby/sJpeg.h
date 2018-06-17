@@ -31,7 +31,7 @@ private:
 	uint32_t row_pitch;
 	uint32_t row_blocks_per_mcu;
 	uint32_t col_blocks_per_mcu;
-	uint8_t reduce;
+	int m_split;
 	int decode_mcu(void);
 public:
 	uint8_t *pImage;
@@ -48,7 +48,7 @@ public:
 
 	sJpeg();
 	~sJpeg();
-	int decode(char* pFilename, unsigned char pReduce);
+	int decode(char* pFilename, int split);
 	int available(void);
 	int read(void);
 	inline int width() {

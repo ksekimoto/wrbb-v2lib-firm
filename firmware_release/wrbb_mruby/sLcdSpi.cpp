@@ -714,7 +714,6 @@ int LcdSpi::DispBmpSd(int x, int y, const char *filename)
     depth = (int)*((uint16_t *)&BmpHeader[0x1c]);
     lineBytes = wx * depth / 8;
     bufSize = lineBytes * bitmapDy;
-	DEBUG_PRINT("headSize=", headSize);
 	DEBUG_PRINT("wx=", wx);
 	DEBUG_PRINT("wy=", wy);
 	DEBUG_PRINT("depth=", depth);
@@ -751,40 +750,95 @@ int LcdSpi::DispBmpSd(int x, int y, const char *filename)
 	return 1;
 }
 
-unsigned short display[64][128];
-
 int LcdSpi::DispJpegSd(int x, int y, const char *filename)
 {
 	sJpeg jpeg;
 	uint8_t *img;
 	int cx, cy;
+	int sx, sy;
+	int decoded_width;
+	int decoded_height;
 	int dDiv = 2;
+	int split_disp = 1;
+	int split = 0;
+	int alloc_size = 0;
+	unsigned short *dispBuf = (unsigned short *)NULL;
 
-	jpeg.decode((char *)filename, 0);
-	if (jpeg.err != 0)
+	jpeg.decode((char *)filename, split);
+	if (jpeg.err != 0) {
+		DEBUG_PRINT("jpeg decode error", -1);
 		return -1;
+	}
+	decoded_width = jpeg.decoded_width;
+	decoded_height = jpeg.decoded_height;
+	if (split_disp) {
+		alloc_size = jpeg.MCUWidth() * jpeg.MCUHeight() * sizeof (unsigned short);
+	} else {
+		// alloc buf for jpeg size
+		alloc_size = jpeg.width() * jpeg.height() * sizeof (unsigned short);
+	}
+	dispBuf = (unsigned short *)malloc(alloc_size);
+	if (!dispBuf) {
+		DEBUG_PRINT("dispBuf allocation failed.", -1);
+		return -1;
+	} else {
+		DEBUG_PRINT("dispBuf allocated", alloc_size);
+	}
 	while (jpeg.read()) {
 		img = jpeg.pImage;
-        for (int ty = 0; ty < jpeg.MCUHeight(); ty++) {
-            for (int tx = 0; tx < jpeg.MCUWidth(); tx++) {
-                cx = jpeg.MCUx * jpeg.MCUWidth() + tx;
-                cy = (jpeg.MCUy * jpeg.MCUHeight()) % (_disp_wx / dDiv) + ty;
-                if ((cx < jpeg.decoded_width) && (cy < jpeg.decoded_height)) {
-                    if (jpeg.comps == 1) {
-                        if ((cx < _disp_wx) && (cy < _disp_wy/dDiv))
-                           display[cy][cx] = (((img[0]>>3)<<11))|(((img[0]>>2)<<5))|((img[0]>>3));
-                    } else {
-                        if ((cx < _disp_wx) && (cy < _disp_wy/dDiv))
-                           display[cy][cx] = (((img[0]>>3)<<11))|(((img[1]>>2)<<5))|((img[2]>>3));
-                    }
-                }
-                img += jpeg.comps;
-            }
-        }
+		sx = jpeg.MCUx * jpeg.MCUWidth();
+		//sy = jpeg.MCUy * jpeg.MCUHeight() % (_disp_wx / dDiv);
+		sy = jpeg.MCUy * jpeg.MCUHeight();
+		memset(dispBuf, 0, alloc_size);
+		for (int ty = 0; ty < jpeg.MCUHeight(); ty++) {
+			for (int tx = 0; tx < jpeg.MCUWidth(); tx++) {
+				cx = sx + tx;
+				cy = sy + ty;
+				if ((cx < jpeg.width()) && (cy < jpeg.height())) {
+					if (jpeg.comps == 1) {
+						if ((cx < _disp_wx) && (cy < _disp_wy/dDiv)) {
+							if (split_disp) {
+								DEBUG_PRINT("ofs", ty * decoded_width + tx);
+								dispBuf[ty * decoded_width + tx] = (((img[0]>>3)<<11))|(((img[0]>>2)<<5))|((img[0]>>3));
+							} else {
+								dispBuf[cy * decoded_width + cx] = (((img[0]>>3)<<11))|(((img[0]>>2)<<5))|((img[0]>>3));
+							}
+						}
+					} else {
+						//if ((cx < _disp_wx) && (cy < _disp_wy/dDiv)) {
+							if (split_disp) {
+								//DEBUG_PRINT("ofs", ty * decoded_width + tx);
+								dispBuf[ty * jpeg.MCUWidth() + tx] = (((img[0]>>3)<<11))|(((img[1]>>2)<<5))|((img[2]>>3));
+							} else {
+								dispBuf[cy * decoded_width + cx] = (((img[0]>>3)<<11))|(((img[1]>>2)<<5))|((img[2]>>3));
+							}
+						//}
+					}
+				}
+				img += jpeg.comps;
+			}
+		}
+		if (split_disp) {
+			//DEBUG_PRINT("sx", sx);
+			//DEBUG_PRINT("sy", sy);
+			int disp_height;
+			if ((jpeg.MCUy + 1) * jpeg.MCUHeight() > jpeg.height()) {
+				disp_height =  jpeg.height() - sy;
+			} else {
+				disp_height = jpeg.MCUHeight();
+			}
+			BitBltEx565(x + sx, y + sy, jpeg.MCUWidth(), disp_height, (uint32_t *)dispBuf);
+		}
 	}
-	DEBUG_PRINT("err=", err);
+	DEBUG_PRINT("err=", jpeg.err);
 	if (jpeg.err == 0 || jpeg.err == PJPG_NO_MORE_BLOCKS) {
-		BitBltEx(x, y, jpeg.width(), jpeg.height(), (uint32_t *)display);
+		if (!split_disp) {
+			BitBltEx565(x, y, jpeg.width(), jpeg.height(), (uint32_t *)dispBuf);
+		}
+	}
+	if (dispBuf) {
+		DEBUG_PRINT("dispBuf deallocated", 0);
+		free(dispBuf);
 	}
 	return 1;
 }

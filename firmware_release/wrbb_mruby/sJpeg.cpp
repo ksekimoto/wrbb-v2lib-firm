@@ -20,7 +20,7 @@
 #include "picojpeg.h"
 #include "sJpeg.h"
 
-#define	DEBUG		// Define if you want to debug
+//#define	DEBUG		// Define if you want to debug
 #ifdef DEBUG
 #  define DEBUG_PRINT(m,v)    { Serial.print("** "); Serial.print((m)); Serial.print(":"); Serial.println((v)); }
 #else
@@ -43,7 +43,7 @@ sJpeg::sJpeg() {
 	decoded_height = 0;
 	row_blocks_per_mcu = 0;
 	col_blocks_per_mcu = 0;
-	reduce = 0;
+	m_split = 1;
 	pImage = (uint8_t *)NULL;
 	comps = 0;
 	MCUSPerRow = 0;
@@ -77,9 +77,9 @@ unsigned char pjpeg_need_bytes_callback(unsigned char* pBuf, unsigned char buf_s
 	return 0;
 }
 
-int sJpeg::decode(char *filename, unsigned char pReduce)
+int sJpeg::decode(char *filename, int split)
 {
-	reduce = pReduce;
+	m_split = split;
 	g_pInFile = SD.open(filename, FILE_READ);
 	if (!g_pInFile) {
 		DEBUG_PRINT("File can't be opened", filename);
@@ -92,7 +92,7 @@ int sJpeg::decode(char *filename, unsigned char pReduce)
 	DEBUG_PRINT("FileSize", g_nInFileSize);
 	err = (int)pjpeg_decode_init(&image_info,
 	        (pjpeg_need_bytes_callback_t)pjpeg_need_bytes_callback,
-	        (void *)NULL, (unsigned char)reduce);
+	        (void *)NULL, m_split);
 	if (err != 0) {
 		DEBUG_PRINT("pjpeg_decode_init() NG", (int )err);
 		if (err == PJPG_UNSUPPORTED_MODE) {
@@ -103,9 +103,9 @@ int sJpeg::decode(char *filename, unsigned char pReduce)
 		return -1;
 	}
 	decoded_width =
-	        reduce ? (image_info.m_MCUSPerRow * MCUWidth()) / 8 : width();
+	        m_split ? (image_info.m_MCUSPerRow * MCUWidth()) / 8 : width();
 	decoded_height =
-	        reduce ? (image_info.m_MCUSPerCol * MCUHeight()) / 8 : height();
+	        m_split ? (image_info.m_MCUSPerCol * MCUHeight()) / 8 : height();
 	comps = image_info.m_comps;
 	row_pitch = MCUWidth() * image_info.m_comps;
 	MCUSPerRow = image_info.m_MCUSPerRow;
@@ -174,8 +174,12 @@ int sJpeg::read(void)
 		}
 		return 0;
 	}
-	if (reduce) {
+	if (m_split) {
 		pDst_row = pImage;
+		DEBUG_PRINT("col_blocks", col_blocks_per_mcu);
+		DEBUG_PRINT("row_blocks", row_blocks_per_mcu);
+		DEBUG_PRINT("pDst_row ofs", (int)(pDst_row - pImage));
+		DEBUG_PRINT("row_pitch", row_pitch);
 		if (image_info.m_scanType == PJPG_GRAYSCALE) {
 			*pDst_row = image_info.m_pMCUBufR[0];
 		} else {
@@ -189,7 +193,9 @@ int sJpeg::read(void)
 					pDst_row += 3;
 					src_ofs += 64;
 				}
-				pDst_row += row_pitch - 3 * row_blocks_per_mcu;
+				pDst_row += (row_pitch - 3 * row_blocks_per_mcu);
+				DEBUG_PRINT("pDst_row ofs", (int)(pDst_row - pImage));
+				DEBUG_PRINT("(row_pitch - 3 * row_blocks_per_mcu)", (int)(row_pitch - 3 * row_blocks_per_mcu));
 			}
 		}
 	} else {
