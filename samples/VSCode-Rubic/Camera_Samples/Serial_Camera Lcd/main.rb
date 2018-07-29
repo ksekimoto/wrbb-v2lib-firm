@@ -1,28 +1,12 @@
 #!mruby
-#
-# How to use LcdSpi Class
-# LcdSpi.New (lcd_id, spi_type, cs, clk, dout, reset, rs, din)
-#   lcd_id
-#   0: Nokia 6100 (PCF8833)
-#   1: Nokia 6100 (S1D15G10)
-#   spi_type
-#   0: software
-#   1: hardware
-# LcdSpi.clear()
-# LcdSpi.set_font(font_id)
-#   font_id
-#   0: MISAKIFONT4X8
-#   1: MISAKIFONT6X12
-# LcdSpi.putxy(x, y, c)
-# LcdSpi.putc(c)
-# LcdSpi.puts(string)
-#
-@usb = Serial.new 0
+
+@Usb = Serial.new(0, 115200)
+@Se1 = Serial.new(1, 115200)
 def p obj
-    @usb.print obj.to_s
+    @Usb.print obj.to_s
 end
 def pl obj
-    @usb.println obj.to_s
+    @Usb.println obj.to_s
 end
 
 if (!System.use?("SD")) then
@@ -30,6 +14,16 @@ if (!System.use?("SD")) then
     System.exit 
 end
 puts "SD Ready"
+
+FileName = "/SCMR32.JPG"
+
+pl "Serial Camera"
+@sc = SerialCamera.new(1, 115200)
+pl "Serial Camera initialize"
+@sc.precapture(1)
+@sc.capture
+@sc.save(FileName)
+pl "Serial Camera end"
 
 # LCD Nokia 6100
 #LcdSpi = LcdSpi.new(0, 0, 10, 13, 11, 6, -1, -1) 
@@ -43,11 +37,6 @@ LcdSpi.puts("This is test\r\n")
 LcdSpi.puts("GR-CITRUS LCD\n")
 pl "LcdSpi.puts()"
 
-#FileName = "/sif1201.bmp"
-#FileName = "/citrus24.bmp"
-#FileName = "/citrus24.jpg"
-FileName = "/mif1203.jpg"
-FileName = "/PIC00.JPG"
 if SD.exists(FileName) == 1 then
     pl FileName + " exists"
 else
