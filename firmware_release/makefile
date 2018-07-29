@@ -1,4 +1,6 @@
-INC_TWITTER = 1
+INC_SERIALCAMERA = 1
+#INC_TWITTER = 1
+INC_UTIL = 1
 
 SRCFILES = ./gr_sketch.cpp 
 SRCFILES += ./gr_common/core/HardwareSerial.cpp 
@@ -59,13 +61,18 @@ SRCFILES += ./wrbb_mruby/sMem.cpp
 SRCFILES += ./wrbb_mruby/sRtc.cpp 
 SRCFILES += ./wrbb_mruby/sSdCard.cpp 
 SRCFILES += ./wrbb_mruby/sSerial.cpp 
-SRCFILES += ./wrbb_mruby/sServo.cpp 
+ifdef INC_SERIALCAMERA
+SRCFILES += ./wrbb_mruby/sSerialCamera.cpp 
+endif
 SRCFILES += ./wrbb_mruby/sSpi.cpp 
 SRCFILES += ./wrbb_mruby/sSys.cpp
 SRCFILES += ./wrbb_mruby/sJpeg.cpp
 SRCFILES += ./wrbb_mruby/picojpeg.c
 ifdef INC_TWITTER 
 SRCFILES += ./wrbb_mruby/sTwitter.cpp 
+endif
+ifdef INC_UTIL
+SRCFILES += ./wrbb_mruby/sUtil.cpp 
 endif
 SRCFILES += ./wrbb_mruby/sWiFi.cpp 
 ifdef INC_MP3
@@ -142,6 +149,9 @@ OBJFILES += ./wrbb_mruby/sMem.o
 OBJFILES += ./wrbb_mruby/sRtc.o
 OBJFILES += ./wrbb_mruby/sSdCard.o
 OBJFILES += ./wrbb_mruby/sSerial.o
+ifdef INC_SERIALCAMERA
+OBJFILES += ./wrbb_mruby/sSerialCamera.o 
+endif
 OBJFILES += ./wrbb_mruby/sServo.o
 OBJFILES += ./wrbb_mruby/sSpi.o
 OBJFILES += ./wrbb_mruby/sSys.o
@@ -149,6 +159,9 @@ OBJFILES += ./wrbb_mruby/sJpeg.o
 OBJFILES += ./wrbb_mruby/picojpeg.o
 ifdef INC_TWITTER 
 OBJFILES += ./wrbb_mruby/sTwitter.o
+endif
+ifdef INC_UTIL 
+OBJFILES += ./wrbb_mruby/sUtil.o
 endif
 OBJFILES += ./wrbb_mruby/sWiFi.o
 ifdef INC_MP3
@@ -309,6 +322,9 @@ HEADERFILES += ./wrbb_mruby/sMem.h
 HEADERFILES += ./wrbb_mruby/sRtc.h 
 HEADERFILES += ./wrbb_mruby/sSdCard.h 
 HEADERFILES += ./wrbb_mruby/sSerial.h 
+ifdef INC_SERIALCAMERA
+HEADERFILES += ./wrbb_mruby/sSerialCamera.h
+endif
 HEADERFILES += ./wrbb_mruby/sServo.h 
 HEADERFILES += ./wrbb_mruby/sSpi.h 
 HEADERFILES += ./wrbb_mruby/sSys.h
@@ -316,6 +332,9 @@ HEADERFILES += ./wrbb_mruby/sSys.h
 HEADERFILES += ./wrbb_mruby/picojpeg.h
 ifdef INC_TWITTER 
 HEADERFILES += ./wrbb_mruby/sTwitter.h 
+endif
+ifdef INC_UTIL
+HEADERFILES += ./wrbb_mruby/sUtil.h 
 endif
 HEADERFILES += ./wrbb_mruby/sWiFi.h 
 ifdef INC_MP3
@@ -396,8 +415,14 @@ CCINC := $(filter-out -I./wrbb_mruby/include/mruby, $(CCINC)) #string.hの重複
 CFLAGS := -Wall -ffunction-sections -fno-function-cse -fsigned-char -fdata-sections -I. -I"$(GNU_PATH)rx-elf\include" -I"$(GNU_PATH)lib\gcc\rx-elf\$(GCC_VERSION)\include" -mno-balign -DARDUINO=100 -DCPPAPP -D__RX_LITTLE_ENDIAN__=1 -O2 -g2 -g -flto -mlittle-endian-data -mcpu=rx600 -m64bit-doubles \
           -DMRB_USE_FLOAT -DMRB_FUNCALL_ARGC_MAX=6 -DMRB_HEAP_PAGE_SIZE=24 -DMRB_USE_IV_SEGLIST -DMRB_IVHASH_INIT_SIZE=3 -DKHASH_DEFAULT_SIZE=2 -DPOOL_PAGE_SIZE=256 -DMRB_BYTECODE_DECODE_OPTION # mruby/build_config.rbを参照のこと
 CFLAGS += -DGRCITRUS
+ifdef INC_SERIALCAMERA
+CFLAGS += -DMR_SERIALCAMERA
+endif
 ifdef INC_TWITTER
 CFLAGS += -DMR_TWITTER
+endif
+ifdef INC_UTIL
+CFLAGS += -DMR_UTIL
 endif
 AFLAGS := -Wall -ffunction-sections -fno-function-cse -fsigned-char -fdata-sections -I. -I"$(GNU_PATH)rx-elf\include" -I"$(GNU_PATH)lib\gcc\rx-elf\$(GCC_VERSION)\include" -mno-balign -DARDUINO=100 -DCPPAPP -D__RX_LITTLE_ENDIAN__=1 -O2 -g2 -g -flto -mlittle-endian-data -mcpu=rx600 -m64bit-doubles
 AFLAGS += -DGRCITRUS

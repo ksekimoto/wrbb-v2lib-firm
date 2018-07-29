@@ -27,6 +27,9 @@
 #include "sKernel.h"
 #include "sSys.h"
 #include "sSerial.h"
+#ifdef MR_SERIALCAMERA
+#include "sSerialCamera.h"
+#endif
 #include "sMem.h"
 #include "sI2c.h"
 #include "sServo.h"
@@ -36,6 +39,9 @@
 #include "sLcdSpi.h"
 #ifdef MR_TWITTER
 #include "sTwitter.h"
+#endif
+#ifdef MR_UTIL
+#include "sUtil.h"
 #endif
 
 #if BOARD == BOARD_GR || FIRMWARE == SDBT || FIRMWARE == SDWF || BOARD == BOARD_P05 || BOARD == BOARD_P06
@@ -113,8 +119,14 @@ bool RubyRun(void)
 	spi_Init(mrb);		//SPI関連のメソッドの設定
 	font_Init(mrb);		//Font関連のメソッドの設定
 	lcdSpi_Init(mrb);	//Lcd関連のメソッドの設定
+#ifdef MR_SERIALCAMERA
+	serialcamera_Init(mrb);	//SerialCamera関連のメソッドの設定
+#endif
 #ifdef MR_TWITTER
 	twitter_Init(mrb);	//Twitter関連のメソッドの設定
+#endif
+#ifdef MR_UTIL
+	util_Init(mrb);		//Util関連のメソッドの設定
 #endif
 
 	//classtest_Init(mrb);

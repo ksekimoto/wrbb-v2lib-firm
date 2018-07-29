@@ -68,11 +68,11 @@ uint8_t const  SD_CHIP_SELECT_PIN = SS_PIN;
 #elif defined(GRSAKURA)
 uint8_t const  SD_CHIP_SELECT_PIN = 22;
 #elif defined(GRCITRUS)
-uint8_t const  SD_CHIP_SELECT_PIN = 2;
+//uint8_t const  SD_CHIP_SELECT_PIN = 2;
 // For JTAG Debugging
 // Conflict JRAG TMS Pin with CITRUS SD-CARD CS Pin
 // Need to use another Pin such as Pin4
-//uint8_t const  SD_CHIP_SELECT_PIN = 4;
+uint8_t const  SD_CHIP_SELECT_PIN = 4;
 #endif
 // The following three pins must not be redefined for hardware SPI.
 /** SPI Master Out Slave In pin */
