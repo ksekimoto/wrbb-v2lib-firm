@@ -6,6 +6,10 @@ MEMORY
 
 SECTIONS
 {
+	.fvectors 0xFFFFFF80 : AT (0xFFFFFF80)
+	{
+		KEEP(*(.fvectors))
+	} > ROM
 	.text 0xFFF00000 : AT (0xFFF00000)
 	{
 		*(.text)
@@ -51,10 +55,6 @@ SECTIONS
 		*(C_2)
 		*(C)
 		_erodata = .;
-	} > ROM
-	.fvectors : AT (0xFFFFFF80)
-	{
-		KEEP(*(.fvectors))
 	} > ROM
 	.eh_frame_hdr : 
 	{

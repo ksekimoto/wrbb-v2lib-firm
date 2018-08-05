@@ -1,3 +1,13 @@
+#TARGET_BOARD = GRCITRUS
+TARGET_BOARD = GRCITRUS_JTAG
+#TARGET_BOARD = GRSAKURA_128
+#TARGET_BOARD = GRSAKURA_128_JTAG
+#TARGET_BOARD = GRSAKURA_256
+
+INC_SPI = 1
+INC_FONT = 1
+INC_LCDSPI = 1
+INC_JPEG = 1
 INC_SERIALCAMERA = 1
 #INC_TWITTER = 1
 INC_UTIL = 1
@@ -50,13 +60,22 @@ SRCFILES += ./gr_common/rx63n/reboot.c
 SRCFILES += ./gr_common/rx63n/reset_program.asm 
 SRCFILES += ./gr_common/rx63n/util.c 
 SRCFILES += ./gr_common/rx63n/vector_table.c
+SRCFILES += ./gr_common/rx63n/sbrk.c
 SRCFILES += ./wrbb_eepfile/eepfile.cpp 
 SRCFILES += ./wrbb_eepfile/eeploader.cpp
 SRCFILES += ./wrbb_mruby/sExec.cpp
+ifdef INC_FONT
 SRCFILES += ./wrbb_mruby/sFont.cpp 
+endif
 SRCFILES += ./wrbb_mruby/sI2c.cpp 
+ifdef INC_FONT
+SRCFILES += ./wrbb_mruby/sJpeg.cpp
+SRCFILES += ./wrbb_mruby/picojpeg.c
+endif
 SRCFILES += ./wrbb_mruby/sKernel.cpp  
+ifdef INC_LCDSPI
 SRCFILES += ./wrbb_mruby/sLcdSpi.cpp 
+endif
 SRCFILES += ./wrbb_mruby/sMem.cpp 
 SRCFILES += ./wrbb_mruby/sRtc.cpp 
 SRCFILES += ./wrbb_mruby/sSdCard.cpp 
@@ -64,10 +83,10 @@ SRCFILES += ./wrbb_mruby/sSerial.cpp
 ifdef INC_SERIALCAMERA
 SRCFILES += ./wrbb_mruby/sSerialCamera.cpp 
 endif
+ifdef INC_SPI
 SRCFILES += ./wrbb_mruby/sSpi.cpp 
+endif
 SRCFILES += ./wrbb_mruby/sSys.cpp
-SRCFILES += ./wrbb_mruby/sJpeg.cpp
-SRCFILES += ./wrbb_mruby/picojpeg.c
 ifdef INC_TWITTER 
 SRCFILES += ./wrbb_mruby/sTwitter.cpp 
 endif
@@ -140,11 +159,19 @@ OBJFILES += ./gr_common/rx63n/hardware_setup.o
 OBJFILES += ./wrbb_eepfile/eepfile.o
 OBJFILES += ./wrbb_eepfile/eeploader.o
 OBJFILES += ./wrbb_mruby/sExec.o
+ifdef INC_FONT
 OBJFILES += ./wrbb_mruby/sFont.o
+endif
 OBJFILES += ./wrbb_mruby/sGlobal.o
 OBJFILES += ./wrbb_mruby/sI2c.o
+ifdef INC_JPEG
+OBJFILES += ./wrbb_mruby/sJpeg.o
+OBJFILES += ./wrbb_mruby/picojpeg.o
+endif
 OBJFILES += ./wrbb_mruby/sKernel.o
+ifdef INC_LCDSPI
 OBJFILES += ./wrbb_mruby/sLcdSpi.o
+endif
 OBJFILES += ./wrbb_mruby/sMem.o
 OBJFILES += ./wrbb_mruby/sRtc.o
 OBJFILES += ./wrbb_mruby/sSdCard.o
@@ -153,10 +180,10 @@ ifdef INC_SERIALCAMERA
 OBJFILES += ./wrbb_mruby/sSerialCamera.o 
 endif
 OBJFILES += ./wrbb_mruby/sServo.o
+ifdef INC_SPI
 OBJFILES += ./wrbb_mruby/sSpi.o
+endif
 OBJFILES += ./wrbb_mruby/sSys.o
-OBJFILES += ./wrbb_mruby/sJpeg.o
-OBJFILES += ./wrbb_mruby/picojpeg.o
 ifdef INC_TWITTER 
 OBJFILES += ./wrbb_mruby/sTwitter.o
 endif
@@ -187,6 +214,7 @@ OBJFILES += ./gr_common/rx63n/interrupt_handlers.o
 OBJFILES += ./gr_common/rx63n/reboot.o
 OBJFILES += ./gr_common/rx63n/util.o
 OBJFILES += ./gr_common/rx63n/vector_table.o
+OBJFILES += ./gr_common/rx63n/sbrk.o
 ifdef INC_MP3
 OBJFILES += ./WavMp3p/libmad-0.15.1b/bit.o
 OBJFILES += ./WavMp3p/libmad-0.15.1b/decoder.o
@@ -315,9 +343,18 @@ HEADERFILES += ./gr_common/rx63n/util.h
 HEADERFILES += ./wrbb_eepfile/eepfile.h 
 HEADERFILES += ./wrbb_eepfile/eeploader.h 
 HEADERFILES += ./wrbb_mruby/sExec.h 
+ifdef INC_FONT
 HEADERFILES += ./wrbb_mruby/sFont.h 
+endif
 HEADERFILES += ./wrbb_mruby/sI2c.h 
+ifdef INC_JPEG
+HEADERFILES += ./wrbb_mruby/sJpeg.h
+HEADERFILES += ./wrbb_mruby/picojpeg.h
+endif
 HEADERFILES += ./wrbb_mruby/sKernel.h 
+ifdef INC_LCDSPI
+HEADERFILES += ./wrbb_mruby/sLcdSpi.h 
+endif
 HEADERFILES += ./wrbb_mruby/sMem.h 
 HEADERFILES += ./wrbb_mruby/sRtc.h 
 HEADERFILES += ./wrbb_mruby/sSdCard.h 
@@ -326,10 +363,10 @@ ifdef INC_SERIALCAMERA
 HEADERFILES += ./wrbb_mruby/sSerialCamera.h
 endif
 HEADERFILES += ./wrbb_mruby/sServo.h 
+ifdef INC_SPI
 HEADERFILES += ./wrbb_mruby/sSpi.h 
+endif
 HEADERFILES += ./wrbb_mruby/sSys.h
-#HEADERFILES += ./wrbb_mruby/sJpeg.h
-HEADERFILES += ./wrbb_mruby/picojpeg.h
 ifdef INC_TWITTER 
 HEADERFILES += ./wrbb_mruby/sTwitter.h 
 endif
@@ -414,7 +451,34 @@ GCC_VERSION := 4.8-GNURX_v14.03
 CCINC := $(filter-out -I./wrbb_mruby/include/mruby, $(CCINC)) #string.hの重複を避けるため
 CFLAGS := -Wall -ffunction-sections -fno-function-cse -fsigned-char -fdata-sections -I. -I"$(GNU_PATH)rx-elf\include" -I"$(GNU_PATH)lib\gcc\rx-elf\$(GCC_VERSION)\include" -mno-balign -DARDUINO=100 -DCPPAPP -D__RX_LITTLE_ENDIAN__=1 -O2 -g2 -g -flto -mlittle-endian-data -mcpu=rx600 -m64bit-doubles \
           -DMRB_USE_FLOAT -DMRB_FUNCALL_ARGC_MAX=6 -DMRB_HEAP_PAGE_SIZE=24 -DMRB_USE_IV_SEGLIST -DMRB_IVHASH_INIT_SIZE=3 -DKHASH_DEFAULT_SIZE=2 -DPOOL_PAGE_SIZE=256 -DMRB_BYTECODE_DECODE_OPTION # mruby/build_config.rbを参照のこと
+
+ifeq ($(TARGET_BOARD),GRCITRUS)
 CFLAGS += -DGRCITRUS
+endif
+ifeq ($(TARGET_BOARD),GRCITRUS_JTAG)
+CFLAGS += -DGRCITRUS
+endif
+ifeq ($(TARGET_BOARD),GRSAKURA_128)
+CFLAGS += -DGRSAKURA
+endif
+ifeq ($(TARGET_BOARD),GRSAKURA_128_JTAG)
+CFLAGS += -DGRSAKURA
+endif
+ifeq ($(TARGET_BOARD),GRSAKURA_256)
+CFLAGS += -DGRSAKURA
+endif
+ifdef INC_FONT
+CFLAGS += -DMR_FONT
+endif
+ifdef INC_SPI
+CFLAGS += -DMR_SPI
+endif
+ifdef INC_LCDSPI
+CFLAGS += -DMR_LCDSPI
+endif
+ifdef INC_JPEG
+CFLAGS += -DMR_JPEG
+endif
 ifdef INC_SERIALCAMERA
 CFLAGS += -DMR_SERIALCAMERA
 endif
@@ -438,14 +502,30 @@ DMP = $(GNU_PATH)bin/rx-elf-objdump
 OBJS = $(OBJFILES) $(LIBFILES)
 AOBJS = $(filter-out ./gr_sketch.o, $(OBJFILES))
 
-#TARGET = sakura_sketch_128K
-#LFLAGS = -Map ./gr_build/$(TARGET).map -e_PowerON_Reset -T"./gr_common/linker_arduino_BDDFP.gsi" -no-keep-memory -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" --no-flag-mismatch-warnings --start-group -lstdc++ -lnosys -lsim -lm -lc -lgcc --end-group
+ifeq ($(TARGET_BOARD),GRSAKURA_128)
+TARGET = sakura_sketch_128K
+LFLAGS = -Map ./gr_build/$(TARGET).map -e_PowerON_Reset -T"./gr_common/linker_arduino_BDDFP.gsi" -no-keep-memory -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" --no-flag-mismatch-warnings --start-group -lstdc++ -lnosys -lsim -lm -lc -lgcc --end-group
+endif
 
+ifeq ($(TARGET_BOARD),GRSAKURA_128_JTAG)
+TARGET = sakura_sketch_128K
+LFLAGS = -Map ./gr_build/$(TARGET).map -e_PowerON_Reset -T"./gr_common/linker_arduino_BDDFP_noloader.gsi" -no-keep-memory -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" --no-flag-mismatch-warnings --start-group -lstdc++ -lnosys -lsim -lm -lc -lgcc --end-group
+endif
+
+ifeq ($(TARGET_BOARD),GRCITRUS)
 TARGET = citrus_sketch
 LFLAGS = -Map ./gr_build/$(TARGET).map -e_PowerON_Reset -T"./gr_common/linker_arduino_FDDFP.gsi" -no-keep-memory -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" --no-flag-mismatch-warnings --start-group -lstdc++ -lnosys -lsim -lm -lc -lgcc --end-group
+endif
 
-#TARGET = sakura2_sketch_256K
-#LFLAGS = -Map ./gr_build/$(TARGET).map -e_PowerON_Reset -T"./gr_common/linker_arduino_YDDFP.gsi" -no-keep-memory -S -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" --no-flag-mismatch-warnings --start-group -lstdc++ -lnosys -lsim -lm -lc -lgcc --end-group
+ifeq ($(TARGET_BOARD),GRCITRUS_JTAG)
+TARGET = citrus_sketch
+LFLAGS = -Map ./gr_build/$(TARGET).map -e_PowerON_Reset -T"./gr_common/linker_arduino_FDDFP_noloader.gsi" -no-keep-memory -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" --no-flag-mismatch-warnings --start-group -lstdc++ -lnosys -lsim -lm -lc -lgcc --end-group
+endif
+
+ifeq ($(TARGET_BOARD),GRSAKURA_256)
+TARGET = sakura2_sketch_256K
+LFLAGS = -Map ./gr_build/$(TARGET).map -e_PowerON_Reset -T"./gr_common/linker_arduino_YDDFP.gsi" -no-keep-memory -S -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" --no-flag-mismatch-warnings --start-group -lstdc++ -lnosys -lsim -lm -lc -lgcc --end-group
+endif
 
 #TARGET = wrbb_sketch_128K
 #LFLAGS = -Map ./gr_build/$(TARGET).map -e_PowerON_Reset -T"./gr_common/linker_arduino_BDDFP.gsi" -no-keep-memory -S -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" -L"$(GNU_PATH)rx-elf/lib/64-bit-double" -L"$(GNU_PATH)lib/gcc/rx-elf/$(GCC_VERSION)/64-bit-double" --no-flag-mismatch-warnings --start-group -lstdc++ -lnosys -lsim -lm -lc -lgcc --end-group

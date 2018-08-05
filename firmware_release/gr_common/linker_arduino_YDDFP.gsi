@@ -92,6 +92,10 @@ SECTIONS
 	{
 		_ustack = .;
 	} > RAM
+	.heapmax 0x3F000 : AT (0x3F000)
+	{
+		_heapmax = .;
+	} > RAM
 	.data 0x1000 : AT (_mdata)
 	{
 		_data = .;

@@ -21,7 +21,9 @@
 #include "ILI9340.h"
 #include "sLcdSpi.h"
 #include "sSpi.h"
+#ifdef MR_JPEG
 #include "sJpeg.h"
+#endif
 
 #if BOARD == BOARD_GR || FIRMWARE == SDBT || FIRMWARE == SDWF || BOARD == BOARD_P05 || BOARD == BOARD_P06
 	#include "sSdCard.h"
@@ -750,6 +752,7 @@ int LcdSpi::DispBmpSd(int x, int y, const char *filename)
 	return 1;
 }
 
+#ifdef MR_JPEG
 int LcdSpi::DispJpegSd(int x, int y, const char *filename)
 {
 	sJpeg jpeg;
@@ -842,6 +845,7 @@ int LcdSpi::DispJpegSd(int x, int y, const char *filename)
 	}
 	return 1;
 }
+#endif
 
 //**************************************************
 // メモリの開放時に走る
@@ -1017,5 +1021,7 @@ void lcdSpi_Init(mrb_state *mrb)
 	mrb_define_module_function(mrb, sLcdSpiModule, "puts", mrb_sLcdSpi_puts, MRB_ARGS_REQ(1));
 	mrb_define_module_function(mrb, sLcdSpiModule, "BitBlt", mrb_sLcdSpi_BitBlt, MRB_ARGS_REQ(5));
 	mrb_define_module_function(mrb, sLcdSpiModule, "dispBmpSD", mrb_sLcdSpi_dispBmpSd, MRB_ARGS_REQ(3));
+#ifdef MR_JPEG
 	mrb_define_module_function(mrb, sLcdSpiModule, "dispJpegSD", mrb_sLcdSpi_dispJpegSd, MRB_ARGS_REQ(3));
+#endif
 }

@@ -34,9 +34,15 @@
 #include "sI2c.h"
 #include "sServo.h"
 #include "sGlobal.h"
+#ifdef MR_SPI
 #include "sSpi.h"
+#endif
+#ifdef MR_FONT
 #include "sFont.h"
+#endif
+#ifdef MR_LCDSPI
 #include "sLcdSpi.h"
+#endif
 #ifdef MR_TWITTER
 #include "sTwitter.h"
 #endif
@@ -116,9 +122,15 @@ bool RubyRun(void)
 #ifndef GRSAKURA
 	servo_Init(mrb);	//サーボ関連メソッドの設定
 #endif
+#ifdef MR_SERIALCAMERA
 	spi_Init(mrb);		//SPI関連のメソッドの設定
+#endif
+#ifdef MR_FONT
 	font_Init(mrb);		//Font関連のメソッドの設定
+#endif
+#ifdef MR_LCDSPI
 	lcdSpi_Init(mrb);	//Lcd関連のメソッドの設定
+#endif
 #ifdef MR_SERIALCAMERA
 	serialcamera_Init(mrb);	//SerialCamera関連のメソッドの設定
 #endif

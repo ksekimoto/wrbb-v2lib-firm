@@ -17,7 +17,7 @@
 #define MISAKIFONT4X8
 #define MISAKIFONT6X12
 #define MISAKIFONT8X8
-//#define MISAKIFONT12X12
+#define MISAKIFONT12X12
 
 #include "sFont.h"
 #ifdef MISAKIFONT4X8

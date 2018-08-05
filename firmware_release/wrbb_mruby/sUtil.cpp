@@ -15,7 +15,7 @@
 #include "../wrbb.h"
 #include "sUtil.h"
 
-#define	DEBUG		// Define if you want to debug
+//#define	DEBUG		// Define if you want to debug
 #ifdef DEBUG
 #  define DEBUG_PRINT(m,v)		{ Serial.print("** "); Serial.print((m)); Serial.print(":"); Serial.println((v)); }
 #  define DEBUG_PRINTH(m,v)		{ Serial.print("** "); Serial.print((m)); Serial.print(":"); Serial.println((v), 16); }
