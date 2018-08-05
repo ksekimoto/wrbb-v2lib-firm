@@ -47,8 +47,12 @@ public:
 	void BitBltEx565(int x, int y, int width, int height, uint32_t data[]);
 	void BitBltEx(int x, int y, int width, int height, uint32_t data[]);
 	void WriteChar_Color(unsigned char c, int cx, int cy, uint16_t fgcol, uint16_t bgcol);
+	void WriteUnicode_Color(unsigned short u, int cx, int cy, uint16_t fgcol, uint16_t bgcol);
 	void WriteChar(unsigned char c, int cx, int cy);
-	void WriteFormattedChar(unsigned char ch);
+	void WriteUnicode(unsigned short u, int cx, int cy);
+	void WriteFormattedChar(unsigned char c);
+	void WriteFormattedUnicode(unsigned short u);
+	void WriteFormattedUtf8Str(unsigned char *s);
 	void SetFont(Font *font);
 	int DispBmpSd(int x, int y, const char *fn);
 	int DispJpegSd(int x, int y, const char *fn);
@@ -70,8 +74,8 @@ private:
 	int _text_sx;
 	int _text_sy;
 	Font *pFont;
-	int _font_wx;
-	int _font_wy;
+	int _unit_wx;
+	int _unit_wy;
 };
 
 void lcdSpi_Init(mrb_state *mrb);

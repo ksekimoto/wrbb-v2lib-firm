@@ -14,10 +14,16 @@
 #define FONT_UNICODE	2
 
 typedef struct _ASCII_FONT_TBL {
+	int font_wx;
+	int	font_wy;
+	int	font_bytes;
 	unsigned char *ascii_font_data;
 } ASCII_FONT_TBL;
 
 typedef struct _UNICODE_FONT_TBL {
+	int font_wx;
+	int	font_wy;
+	int	font_bytes;
 	unsigned short *CUniFontIdx;
 	unsigned char *CUniFontMap;
 	unsigned char *unicode_font_data;
@@ -28,15 +34,11 @@ typedef struct _UNICODE_FONT_TBL {
 
 typedef struct _FONT_TBL {
 	int font_type;
+	int font_unitx;
+	int font_unity;
 	char *font_name;
-	int font_wx;
-	int	font_wy;
 	ASCII_FONT_TBL *ascii_font_tbl;
 	UNICODE_FONT_TBL *unicode_font_tbl;
-	//union {
-	//	ASCII_FONT_TBL *ascii_font_tbl;
-	//	UNICODE_FONT_TBL *unicode_font_tbl;
-	//};
 } FONT_TBL;
 
 class Font {
@@ -45,20 +47,17 @@ public:
 	virtual ~Font();
 	char *fontName(void);
 	unsigned char* fontData(int c);
-	int fontWidth();
-	int fontHeight();
-	int fontBytes();
+	int fontType();
+	int fontUnitX();
+	int fontUnitY();
+	int fontWidth(int c);
+	int fontHeight(int c);
+	int fontBytes(int c);
 private:
 	FONT_TBL *_font_tbl;
-	int _font_bytes;
 };
 
 void font_Init(mrb_state *mrb);
-
-#include "fonts/sFont4x8.h"
-#include "fonts/sFont6x12.h"
-#include "fonts/sFont8x8.h"
-#include "fonts/sFont12x12.h"
 
 extern Font *fontList[];
 

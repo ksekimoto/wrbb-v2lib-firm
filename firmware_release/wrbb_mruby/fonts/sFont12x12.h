@@ -10,6 +10,6 @@
 #ifndef SFONT12X12_H_
 #define SFONT12X12_H_
 
-extern Font MisakiFont12x12;
+#include "sFont.h"
 
 #endif /* SFONT12X12_H_ */

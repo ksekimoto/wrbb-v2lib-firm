@@ -37,24 +37,31 @@ puts "SD Ready"
 # http://www.aitendo.com/product/11963
 LcdSpi = LcdSpi.new(2, 1, 10, 13, 11, 6, 5, 12) 
 pl "LcdSpi.new()"
-LcdSpi.set_font(1)
+LcdSpi.set_font(3)
 pl "LcdSpi.set_font()"
-LcdSpi.puts("This is test\r\n")
-LcdSpi.puts("GR-CITRUS LCD\n")
+LcdSpi.puts("GR-CITRUS SPILCD\r\n")
 pl "LcdSpi.puts()"
+#LcdSpi.pututf8("This is test\r\n")
+LcdSpi.pututf8("mrubyの日本語表示テスト\r\n")
+pl "LcdSpi.pututf8()"
 
 #FileName = "/sif1201.bmp"
 #FileName = "/citrus24.bmp"
 #FileName = "/citrus24.jpg"
 FileName = "/mif1203.jpg"
-FileName = "/PIC00.JPG"
+#FileName = "/PIC00.JPG"
 if SD.exists(FileName) == 1 then
     pl FileName + " exists"
 else
     pl FileName + " doesn't exist"
 end
 
+remain = Util.free_size()
+pl remain
 #LcdSpi.dispBmpSD(0, 0, FileName);
-LcdSpi.dispJpegSD(20, 20, FileName);
+LcdSpi.dispJpegSD(10, 30, FileName);
+
+remain = Util.free_size()
+pl remain
 
 pl "End"

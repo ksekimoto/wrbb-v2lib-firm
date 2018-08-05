@@ -20,21 +20,89 @@
 #define MISAKIFONT12X12
 
 #include "sFont.h"
+
 #ifdef MISAKIFONT4X8
-#include "fonts/sFont4x8.h"
-#include "fonts/sFont4x8.cpp"
+#include "../fonts/sFont4x8_data.h"
+
+static const ASCII_FONT_TBL _misaki_font4x8_Tbl = {
+	4,
+	8,
+	8,
+	(unsigned char *)misaki_font4x8_data
+};
+
+static const FONT_TBL misaki_font4x8_tbl = {
+	FONT_ASCII,
+	4,		/* UnitX */
+	8,		/* UnitY */
+	(char *)"MisakiFont4x8",
+	(ASCII_FONT_TBL *)&_misaki_font4x8_Tbl,
+	(UNICODE_FONT_TBL *)NULL
+};
 #endif
+
 #ifdef MISAKIFONT6X12
-#include "fonts/sFont6x12.h"
-#include "fonts/sFont6x12.cpp"
+#include "../fonts/sFont6x12_data.h"
+
+static const ASCII_FONT_TBL _misaki_font6x12_Tbl = {
+	6,
+	12,
+	12,
+	(unsigned char *)misaki_font6x12_data
+};
+
+static const FONT_TBL misaki_font6x12_tbl = {
+	FONT_ASCII,
+	6,		/* UnitX */
+	12,		/* UnitY */
+	(char *)"MisakiFont6x12",
+	(ASCII_FONT_TBL *)&_misaki_font6x12_Tbl,
+	(UNICODE_FONT_TBL *)NULL
+};
 #endif
+
 #ifdef MISAKIFONT8X8
-#include "fonts/sFont8x8.h"
-#include "fonts/sFont8x8.cpp"
+#include "../fonts/sFont8x8_data.h"
+
+static const UNICODE_FONT_TBL _misaki_font8x8_Tbl = {
+	8,
+	8,
+	8,
+	(unsigned short *)misaki_font8x8_CUniFontIdx,
+	(unsigned char *)misaki_font8x8_CUniFontMap,
+	(unsigned char *)misaki_font8x8_data
+};
+
+static const FONT_TBL misaki_font8x8_tbl = {
+	FONT_UNICODE,
+	4,		/* UnitX */
+	8,		/* UnitY */
+	(char *)"MisakiFont8x8",
+	(ASCII_FONT_TBL *)&_misaki_font4x8_Tbl,
+	(UNICODE_FONT_TBL *)&_misaki_font8x8_Tbl
+};
 #endif
+
 #ifdef MISAKIFONT12X12
-#include "fonts/sFont12x12.h"
-#include "fonts/sFont12x12.cpp"
+#include "../fonts/sFont12x12_data.h"
+
+static const UNICODE_FONT_TBL _misaki_font12x12_Tbl = {
+	12,
+	12,
+	24,
+	(unsigned short *)misaki_font12x12_CUniFontIdx,
+	(unsigned char *)misaki_font12x12_CUniFontMap,
+	(unsigned char *)misaki_font12x12_data
+};
+
+static const FONT_TBL misaki_font12x12_tbl = {
+	FONT_UNICODE,
+	6,		/* UnitX */
+	12,		/* UnitY */
+	(char *)"MisakiFont12x12",
+	(ASCII_FONT_TBL *)&_misaki_font6x12_Tbl,
+	(UNICODE_FONT_TBL *)&_misaki_font12x12_Tbl
+};
 #endif
 
 //#define	DEBUG		// Define if you want to debug
@@ -60,17 +128,29 @@ static const FONT_TBL *fontTblList[] = {
 	(FONT_TBL *)NULL
 };
 
+#ifdef MISAKIFONT4X8
 Font MisakiFont4x8((FONT_TBL *)&misaki_font4x8_tbl);
+#endif
+#ifdef MISAKIFONT6X12
 Font MisakiFont6x12((FONT_TBL *)&misaki_font6x12_tbl);
+#endif
+#ifdef MISAKIFONT8X8
 Font MisakiFont8x8((FONT_TBL *)&misaki_font8x8_tbl);
+#endif
 #ifdef MISAKIFONT12X12
 Font MisakiFont12x12((FONT_TBL *)&misaki_font12x12_tbl);
 #endif
 
 Font *fontList[] = {
+#ifdef MISAKIFONT4X8
 	(Font *)&MisakiFont4x8,
+#endif
+#ifdef MISAKIFONT6X12
 	(Font *)&MisakiFont6x12,
+#endif
+#ifdef MISAKIFONT8X8
 	(Font *)&MisakiFont8x8,
+#endif
 #ifdef MISAKIFONT12X12
 	(Font *)&MisakiFont12x12,
 #endif
@@ -79,7 +159,6 @@ Font *fontList[] = {
 Font::Font(FONT_TBL *font_tbl)
 {
 	_font_tbl = font_tbl;
-	_font_bytes = (((font_tbl->font_wx + 7) / 8) * font_tbl->font_wy);
 }
 
 Font::~Font()
@@ -91,19 +170,43 @@ char *Font::fontName(void)
 	return _font_tbl->font_name;
 }
 
-int Font::fontWidth(void)
+int Font::fontType()
 {
-	return _font_tbl->font_wx;
+	return _font_tbl->font_type;
 }
 
-int Font::fontHeight(void)
+int Font::fontUnitX()
 {
-	return _font_tbl->font_wy;
+	return _font_tbl->font_unitx;
 }
 
-int Font::fontBytes(void)
+int Font::fontUnitY()
 {
-	return _font_bytes;
+	return _font_tbl->font_unity;
+}
+
+int Font::fontWidth(int c)
+{
+	if (c < 0x100)
+		return _font_tbl->ascii_font_tbl->font_wx;
+	else
+		return _font_tbl->unicode_font_tbl->font_wx;
+}
+
+int Font::fontHeight(int c)
+{
+	if (c < 0x100)
+		return _font_tbl->ascii_font_tbl->font_wy;
+	else
+		return _font_tbl->unicode_font_tbl->font_wy;
+}
+
+int Font::fontBytes(int c)
+{
+	if (c < 0x100)
+		return _font_tbl->ascii_font_tbl->font_bytes;
+	else
+		return _font_tbl->unicode_font_tbl->font_bytes;
 }
 
 unsigned char *Font::fontData(int idx)
@@ -113,7 +216,7 @@ unsigned char *Font::fontData(int idx)
 		idx &= 0xff;
 		DEBUG_PRINT("font8 idx: ", idx);
 		p = _font_tbl->ascii_font_tbl->ascii_font_data;
-		p += (idx * fontBytes());
+		p += (idx * fontBytes(idx));
 		return p;
 	} else {
 		DEBUG_PRINT("font16 idx: ", idx);
@@ -134,7 +237,7 @@ unsigned char *Font::fontData(int idx)
 			}
 			DEBUG_PRINT("font16 fidx: ", fidx);
 			p = _font_tbl->unicode_font_tbl->unicode_font_data;
-			p += (fidx * fontBytes());
+			p += (fidx * fontBytes(idx));
 		} else {
 			DEBUG_PRINT("font16 fidx: ", -1);
 			p = (unsigned char *) NULL;
@@ -245,7 +348,7 @@ mrb_value mrb_font_data(mrb_state *mrb, mrb_value self)
 	mrb_get_args(mrb, "i", &idx);
 	buf = (unsigned char *)font->fontData(idx);
 	DEBUG_PRINT("mrb_font_data buf", (int)buf);
-	return mrb_str_new(mrb, (const char*)buf, font->fontBytes());
+	return mrb_str_new(mrb, (const char*)buf, font->fontBytes(idx));
 }
 
 #if 0

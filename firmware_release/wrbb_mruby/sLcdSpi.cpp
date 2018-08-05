@@ -467,8 +467,8 @@ void LcdSpi::Initialize()
 	_cy = 0;
 	_fcol = (uint16_t)0xFFFFFF;
 	_bcol = (uint16_t)0x000000;
-	_font_wx = 4;
-	_font_wy = 8;
+	_unit_wx = 4;
+	_unit_wy = 8;
 	pFont = (Font *)NULL;
 	_PASET = lcdspi_param[_lcd_id]._PASET;
 	_CASET = lcdspi_param[_lcd_id]._CASET;
@@ -581,6 +581,8 @@ void LcdSpi::BitBltEx(int x, int y, int width, int height, uint32_t data[])
 void LcdSpi::WriteChar_Color(unsigned char c, int cx, int cy, uint16_t fgcol, uint16_t bgcol)
 {
 	int x, y;
+	int ux, uy;
+	int wx, wy;
 	uint16_t col0, col1;
 
 	if (pFont == (Font *)NULL) {
@@ -590,21 +592,25 @@ void LcdSpi::WriteChar_Color(unsigned char c, int cx, int cy, uint16_t fgcol, ui
 	if (c >= 0x80)
 		c = 0;
 	font = (unsigned char *)pFont->fontData((int)(c & 0x00ff));
+	ux = pFont->fontUnitX();
+	uy = pFont->fontUnitY();
+	wx = pFont->fontWidth((int)(c & 0x00ff));
+	wy = pFont->fontHeight((int)(c & 0x00ff));
 	if (_spihw) {
 		pspi->beginTransaction(pspi->settings_);
 	} else {
 		SPISW_SetPinMode();
 	}
 	if (_lcd_id < 2) {
-		for (y = 0; y < _font_wy; y++) {
+		for (y = 0; y < wy; y++) {
 			SPISW_LCD_cmd8_0(_CASET);
-			SPISW_LCD_dat8_0(cx * _font_wx + _text_sx);
+			SPISW_LCD_dat8_0(cx * ux + _text_sx);
 			SPISW_LCD_dat8_0(_disp_wx - 1);
 			SPISW_LCD_cmd8_0(_PASET);		//y set
-			SPISW_LCD_dat8_0(cy * _font_wy + y + _text_sy);
+			SPISW_LCD_dat8_0(cy * uy + y + _text_sy);
 			SPISW_LCD_dat8_0(_disp_wy - 1);
 			SPISW_LCD_cmd8_0(_RAMWR);
-			for (x = 0; x < (_font_wx / 2); x++) {
+			for (x = 0; x < (wx / 2); x++) {
 				if (font[y] & (0x80 >> (x * 2))) {
 					col0 = fgcol;
 				} else {
@@ -623,13 +629,13 @@ void LcdSpi::WriteChar_Color(unsigned char c, int cx, int cy, uint16_t fgcol, ui
 			}
 		}
 	} if (_lcd_id == 2) {
-		for (y = 0; y < _font_wy; y++) {
+		for (y = 0; y < wy; y++) {
 			ILI9340_addrset(
-					(uint16_t)(cx * _font_wx + _text_sx),
-					(uint16_t)(cy * _font_wy + y + _text_sy),
+					(uint16_t)(cx * ux + _text_sx),
+					(uint16_t)(cy * uy + y + _text_sy),
 					(uint16_t)(_disp_wx - 1),
 					(uint16_t)(_disp_wy - 1));
-			for (x = 0; x < _font_wx; x++) {
+			for (x = 0; x < wx; x++) {
 				if (font[y] & (0x80 >> x)) {
 					col0 = fgcol;
 				} else {
@@ -647,10 +653,100 @@ void LcdSpi::WriteChar_Color(unsigned char c, int cx, int cy, uint16_t fgcol, ui
 	}
 }
 
+void LcdSpi::WriteUnicode_Color(unsigned short u, int cx, int cy, uint16_t fgcol, uint16_t bgcol)
+{
+	int x, y;
+	int ux, uy;
+	int wx, wy;
+	int off, sht;
+	uint16_t col0, col1;
+
+	if (pFont == (Font *)NULL) {
+		return;
+	}
+	unsigned char *font;
+	font = (unsigned char *)pFont->fontData((int)u);
+	ux = pFont->fontUnitX();
+	uy = pFont->fontUnitY();
+	wx = pFont->fontWidth((int)u);
+	wy = pFont->fontHeight((int)u);
+	if (_spihw) {
+		pspi->beginTransaction(pspi->settings_);
+	} else {
+		SPISW_SetPinMode();
+	}
+	off = 0;
+	sht = 0;
+	if (_lcd_id < 2) {
+		for (y = 0; y < wy; y++) {
+			SPISW_LCD_cmd8_0(_CASET);
+			SPISW_LCD_dat8_0(cx * ux + _text_sx);
+			SPISW_LCD_dat8_0(_disp_wx - 1);
+			SPISW_LCD_cmd8_0(_PASET);		//y set
+			SPISW_LCD_dat8_0(cy * uy + y + _text_sy);
+			SPISW_LCD_dat8_0(_disp_wy - 1);
+			SPISW_LCD_cmd8_0(_RAMWR);
+			for (x = 0; x < wx; x+=2) {
+				if (x == 8) {
+					off++;
+				}
+				if (font[off] & (0x80 >> (x & 0x7))) {
+					col0 = fgcol;
+				} else {
+					col0 = bgcol;
+				}
+				if (font[off] & (0x40 >> (x & 0x7))) {
+					col1 = fgcol;
+				} else {
+					col1 = bgcol;
+				}
+				SPISW_LCD_dat8_0((0xff & (uint8_t) (col0 >> 4)));
+				SPISW_LCD_dat8_0(
+						(0xf0 & (uint8_t) (col0 << 4))
+								| (0x0f & ((uint8_t) (col1 >> 8))));
+				SPISW_LCD_dat8_0((uint8_t) (0xff & col1));
+			}
+			off++;
+		}
+	} if (_lcd_id == 2) {
+		for (y = 0; y < wy; y++) {
+			ILI9340_addrset(
+					(uint16_t)(cx * ux + _text_sx),
+					(uint16_t)(cy * uy + y + _text_sy),
+					(uint16_t)(_disp_wx - 1),
+					(uint16_t)(_disp_wy - 1));
+			for (x = 0; x < wx; x++) {
+				if (x == 8) {
+					off++;
+				}
+				if (font[off] & (0x80 >> (x & 0x7))) {
+					col0 = fgcol;
+				} else {
+					col0 = bgcol;
+				}
+				SPISW_LCD_dat8_1((uint8_t)(col0 >> 8));
+				SPISW_LCD_dat8_1((uint8_t)col0);
+			}
+			off++;
+		}
+	}
+	if (_spihw) {
+		pspi->endTransaction();
+	} else {
+		SPIHW_SetPinMode();
+	}
+}
+
 void LcdSpi::WriteChar(unsigned char c, int row, int col)
 {
 	WriteChar_Color(c, row, col, _fcol, _bcol);
 }
+
+void LcdSpi::WriteUnicode(unsigned short u, int row, int col)
+{
+	WriteUnicode_Color(u, row, col, _fcol, _bcol);
+}
+
 
 void LcdSpi::WriteFormattedChar(unsigned char ch)
 {
@@ -660,7 +756,7 @@ void LcdSpi::WriteFormattedChar(unsigned char ch)
 		_cy = 0;
 	} else if (ch == '\n') {
 		_cy++;
-		if (_cy == _disp_wy / _font_wy) {
+		if (_cy == _disp_wy / pFont->fontUnitY()) {
 			_cy = 0;
 		}
 	} else if (ch == '\r') {
@@ -668,10 +764,40 @@ void LcdSpi::WriteFormattedChar(unsigned char ch)
 	} else {
 		WriteChar(ch, _cx, _cy);
 		_cx++;
-		if (_cx == _disp_wx / _font_wx) {
+		if (_cx == _disp_wx / pFont->fontUnitX()) {
 			_cx = 0;
 			_cy++;
-			if (_cy == _disp_wy / _font_wy) {
+			if (_cy == _disp_wy / pFont->fontUnitY()) {
+				_cy = 0;
+			}
+		}
+	}
+}
+
+void LcdSpi::WriteFormattedUnicode(unsigned short u)
+{
+	if ((char)u == 0xc) {
+		Clear();
+		_cx = 0;
+		_cy = 0;
+	} else if ((char)u == '\n') {
+		_cy++;
+		if (_cy == _disp_wy / pFont->fontUnitY()) {
+			_cy = 0;
+		}
+	} else if ((char)u == '\r') {
+		_cx = 0;
+	} else {
+		WriteUnicode(u, _cx, _cy);
+		if (u < 0x100) {
+			_cx++;
+		} else {
+			_cx+=2;
+		}
+		if (_cx >= _disp_wx / pFont->fontUnitX()) {
+			_cx = 0;
+			_cy++;
+			if (_cy == _disp_wy / pFont->fontUnitY()) {
 				_cy = 0;
 			}
 		}
@@ -681,8 +807,6 @@ void LcdSpi::WriteFormattedChar(unsigned char ch)
 void LcdSpi::SetFont(Font *font)
 {
 	pFont = font;
-	_font_wx = font->fontWidth();
-	_font_wy = font->fontHeight();
 }
 
 Font *LcdSpi::GetFont()
@@ -944,7 +1068,61 @@ mrb_value mrb_sLcdSpi_puts(mrb_state *mrb, mrb_value self)
 		mrb_get_args(mrb, "S", &vstr);
 		str = (unsigned char *)RSTRING_PTR(vstr);
 		while (*str) {
-			lcdspi->WriteFormattedChar((*str++));
+			//lcdspi->WriteFormattedChar((*str++));
+			lcdspi->WriteFormattedUnicode(((unsigned)(*str++)) & 0xff);
+		}
+		return mrb_fixnum_value( 1 );
+	} else {
+		return mrb_fixnum_value( 0 );
+	}
+}
+
+unsigned short cnvUtf8ToUnicode(unsigned char *str, int *size)
+{
+	unsigned int u = 0;
+	unsigned char c = *str++;
+	int len;
+	if ((c & 0x80) == 0) {
+		u = c & 0x7F;
+		len = 0;
+	} else if ((c & 0xE0) == 0xC0) {
+		u = c & 0x1F;
+		len = 1;
+	} else if ((c & 0xF0) == 0xE0) {
+		u = c & 0x0F;
+		len = 2;
+	} else if ((c & 0xF8) == 0xF0) {
+		u = c & 0x07;
+		len = 3;
+	} else if ((c & 0xFC) == 0xF8) {
+		u = c & 0x03;
+		len = 4;
+	} else if ((c & 0xFE) == 0xFC) {
+		u = c & 0x01;
+		len = 5;
+	}
+	*size = len + 1;
+	while (len-- > 0 && ((c = *str) & 0xC0) == 0x80) {
+		u = (u << 6) | (unsigned int)(c & 0x3F);
+		str++;
+	}
+	return (unsigned short)u;
+}
+
+mrb_value mrb_sLcdSpi_pututf8(mrb_state *mrb, mrb_value self)
+{
+	LcdSpi* lcdspi = static_cast<LcdSpi*>(mrb_get_datatype(mrb, self, &lcdspi_type));
+	mrb_value vstr;
+	unsigned char *str;
+	unsigned short u;
+	int len;
+	if (lcdspi->GetFont() != (Font *)NULL) {
+		mrb_get_args(mrb, "S", &vstr);
+		str = (unsigned char *)RSTRING_PTR(vstr);
+		while (*str) {
+			u = cnvUtf8ToUnicode(str, &len);
+			lcdspi->WriteFormattedUnicode(u);
+			str += len;
 		}
 		return mrb_fixnum_value( 1 );
 	} else {
@@ -1019,6 +1197,7 @@ void lcdSpi_Init(mrb_state *mrb)
 	mrb_define_module_function(mrb, sLcdSpiModule, "putxy", mrb_sLcdSpi_putxy, MRB_ARGS_REQ(3));
 	mrb_define_module_function(mrb, sLcdSpiModule, "putc", mrb_sLcdSpi_putc, MRB_ARGS_REQ(1));
 	mrb_define_module_function(mrb, sLcdSpiModule, "puts", mrb_sLcdSpi_puts, MRB_ARGS_REQ(1));
+	mrb_define_module_function(mrb, sLcdSpiModule, "pututf8", mrb_sLcdSpi_pututf8, MRB_ARGS_REQ(1));
 	mrb_define_module_function(mrb, sLcdSpiModule, "BitBlt", mrb_sLcdSpi_BitBlt, MRB_ARGS_REQ(5));
 	mrb_define_module_function(mrb, sLcdSpiModule, "dispBmpSD", mrb_sLcdSpi_dispBmpSd, MRB_ARGS_REQ(3));
 #ifdef MR_JPEG

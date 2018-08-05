@@ -10,6 +10,6 @@
 #ifndef SFONT4X8_H_
 #define SFONT4X8_H_
 
-extern Font MisakiFont4x8;
+#include "sFont.h"
 
 #endif /* SFONT4X8_H_ */
