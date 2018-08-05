@@ -19,7 +19,7 @@
 #include "sSdCard.h"
 #include "sSerialCamera.h"
 
-#define	DEBUG		// Define if you want to debug
+//#define	DEBUG		// Define if you want to debug
 #ifdef DEBUG
 #  define DEBUG_PRINT(m,v)    { Serial.print("** "); Serial.print((m)); Serial.print(":"); Serial.println((v)); }
 #else
