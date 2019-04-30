@@ -18,7 +18,7 @@
 #  define DEBUG_PRINT(m,v)    // do nothing
 #endif
 
-#define RUBY_CODE_SIZE (1024 * 8)		//サイズ制限は無くしたが、8kb以下であればmallocしなくてもいいような仕組みを持たせている
+#define RUBY_CODE_SIZE (1024 * 4)		//サイズ制限は無くしたが、8kb以下であればmallocしなくてもいいような仕組みを持たせている
 
 //バイトコードバージョンを定義します
 #define BYTE_CODE2	2

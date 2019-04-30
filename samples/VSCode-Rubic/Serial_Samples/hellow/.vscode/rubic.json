@@ -5,10 +5,10 @@
         "repositoryUuid": "809d1206-8cd8-46f6-a657-2f60c050d7c9",
         "releaseTag": "v2.42",
         "variationPath": "00/citrus_sketch.bin",
-        "boardPath": "COM3"
+        "boardPath": "COM4"
     },
     "rubicVersion": {
-        "last": "0.99.15",
+        "last": "0.99.18",
         "min": "0.99.6"
     }
 }

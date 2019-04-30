@@ -8,9 +8,10 @@ INC_SPI = 1
 INC_FONT = 1
 INC_LCDSPI = 1
 INC_JPEG = 1
-INC_SERIALCAMERA = 1
+#INC_SERIALCAMERA = 1
 #INC_TWITTER = 1
-INC_UTIL = 1
+#INC_UTIL = 1
+#INC_ETH = 1
 
 SRCFILES = ./gr_sketch.cpp 
 SRCFILES += ./gr_common/core/HardwareSerial.cpp 

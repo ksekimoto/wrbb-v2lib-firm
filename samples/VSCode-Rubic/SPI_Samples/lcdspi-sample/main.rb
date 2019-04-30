@@ -35,7 +35,8 @@ puts "SD Ready"
 #LcdSpi = LcdSpi.new(0, 0, 10, 13, 11, 6, -1, -1) 
 # LCD M022C9340SPI (ILI9340)
 # http://www.aitendo.com/product/11963
-LcdSpi = LcdSpi.new(2, 1, 10, 13, 11, 6, 5, 12) 
+#LcdSpi = LcdSpi.new(2, 1, 10, 13, 11, 6, 5, 12) 
+LcdSpi = LcdSpi.new(2, 1, 10, 13, 11, 5, 6, 12) 
 pl "LcdSpi.new()"
 LcdSpi.set_font(3)
 pl "LcdSpi.set_font()"
@@ -56,12 +57,12 @@ else
     pl FileName + " doesn't exist"
 end
 
-remain = Util.free_size()
-pl remain
+#remain = Util.free_size()
+#pl remain
 #LcdSpi.dispBmpSD(0, 0, FileName);
 LcdSpi.dispJpegSD(10, 30, FileName);
 
-remain = Util.free_size()
-pl remain
+#remain = Util.free_size()
+#pl remain
 
 pl "End"

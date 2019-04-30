@@ -19,15 +19,20 @@
 
 #include <Arduino.h>
 
+#if defined(MR_ETH)
 void EthernetMaininit() __attribute__((weak));
 void EthernetMainloop() __attribute__((weak));
+#endif
+
 int main(void)
 {
     //init(); //moved to reset_program.asm
 #if defined(GRSAKURA)
+#if defined(MR_ETH)
     if (EthernetMaininit) {
         EthernetMaininit();
     }
+#endif
 #endif
 
 #if defined(USBCON)
@@ -39,9 +44,11 @@ int main(void)
         loop();
         //if (serialEventRun) serialEventRun();
 #if defined(GRSAKURA)
+#if defined(MR_ETH)
         if (EthernetMainloop) {
             EthernetMainloop();
         }
+#endif
 #endif
 	}
 	return 0;
