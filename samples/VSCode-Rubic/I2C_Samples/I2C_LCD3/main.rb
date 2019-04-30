@@ -1,14 +1,16 @@
 #!mruby
-@ID = 0x3E
-@Usb = Serial.new(0)
-@Lcd = I2c.new(1)
-@RST = 6
+#V2.49
+# AE-AQM0802 LCD
 
-pinMode(@RST,OUTPUT)
+ADD = 0x3E
+Lcd = I2c.new(1)
+RST = 6
 
-#// 液晶へ１コマンド出力
+pinMode(RST,OUTPUT)
+
+#液晶へ１コマンド出力
 def lcd_cmd(cmd)
-    @Lcd.write(@ID,0x00,cmd)
+    Lcd.write(ADD,0x00,cmd)
 
     if((cmd == 0x01)||(cmd == 0x02))then
         delay(2)
@@ -17,12 +19,13 @@ def lcd_cmd(cmd)
     end
 end
 
-#//データを送る
+#データを送る
 def lcd_data(dat)
-    @Lcd.write(@ID,0x40,dat)
+    Lcd.write(ADD,0x40,dat)
     delay 0
 end
 
+#カーソルのセット
 def lcd_setCursor(clm,row)
     if(row==0)then
         lcd_cmd(0x80+clm)
@@ -33,11 +36,13 @@ def lcd_setCursor(clm,row)
     end
 end
 
+#LCDの初期化
 def lcd_begin()
-    @Usb.println("lcd_begin")
-    digitalWrite(@RST, LOW)
+    puts "lcd_begin"
+
+    digitalWrite(RST, LOW)
     delay(1)
-    digitalWrite(@RST, HIGH)
+    digitalWrite(RST, HIGH)
     delay(40)
     lcd_cmd(0x38)   #// 8bit 2line Normal mode
     lcd_cmd(0x39)   #// 8bit 2line Extend mode
@@ -56,7 +61,7 @@ def lcd_begin()
     lcd_cmd(0x01)       #// Clear Display
     delay(2)
     
-    @Usb.println("end of lcd_begin");
+    puts "end of lcd_begin"
 end
 
 #//全消去関数
@@ -72,14 +77,15 @@ end
 
 
     lcd_begin() #//初期設定
-    @Usb.println("setup");
+    puts 
 
-    "GRCITRUS".each_byte{|c| @Lcd.write(@ID,0x40,c)}
+    "GRCITRUS".each_byte{|c| Lcd.write(ADD,0x40,c)}
 
-    lcd_setCursor(0,0)      #//カーソルを0行に位置設定
-    lcd_print("GR-CITRUS")     #//文字列表示
-    lcd_setCursor(2,1)      #//カーソルを1行、2文字目に位置設定
-    lcd_print("WAKAYAMA")           #//数字を表示
+    lcd_clear()             #全消去
+    lcd_setCursor(0,0)      #カーソルを0行に位置設定
+    lcd_print("192 168")    #文字列表示
+    lcd_setCursor(0,1)      #カーソルを1行、2文字目に位置設定
+    lcd_print("1 130")      #数字を表示
 
     #lcd_setCursor(0,1)      #//カーソルを0行に位置設定
     #"GRCITRUS".each_byte{|c| @Lcd.write(@ID,0x40,c)}
